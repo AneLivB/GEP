@@ -33,6 +33,97 @@ mainfont: Times New Roman
 
 ```{r}
 #install.packages("here")
+#install.packages("pacman")
 #library(here)
 here::here()
 ```
+
+```{r}
+#| label: packages
+#| echo: FALSE
+#here::here()
+invisible(pacman::p_load(dplyr, tidyverse, cowplot, edgeR, DESeq2))
+#cowplot for toggling with plots
+#edgeR  loads limma as a dependency, limma for annalysing microassay and RNA seq data
+#DESeq2 needed for rowCounts
+```
+
+# Data 
+
+```{r}
+#| label: load_data
+#| echo: FALSE
+
+d_n<-readRDS("rnaseq_filtered_Liv.Rdata")
+```
+
+
+
+# Analysis by Bernice
+
+```{r}
+##-------------- ANALYSIS OF TIME POINT --------------##
+
+d_n$samples$group <- as.factor(d_n$samples$group) # group = timepoint (start or end)
+d_n$samples$ID <- as.factor(d_n$samples$ID)
+design <- model.matrix(~ -1 + group, data = d_n$samples) #setting up model contrasts is more straight forward in the absence of an intercept for timepoint
+contr.matrix <- makeContrasts(
+  end_vs_start = group2-group1,
+  levels = colnames(design)) #create matrix for contrasts
+# Use voom to remove variance dependency on mean, see https://bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html
+# voom converts raw counts to log-CPM values by automatically extracting library sizes and normalisation factors from d itself. 
+#  If filtering of lowly-expressed genes is insufficient, a drop in variance levels can be observed at the low end of the expression scale due to very small counts.
+#voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
+vobj_tmp <- voom(d_n, design, plot=TRUE)
+
+# Fit a random effect
+dupcor <- duplicateCorrelation(vobj_tmp, design, block = d_n$samples$ID)
+dupcor$consensus #the estimated intra individual correlation
+#the intra ind correlation will change the voom weights slightly
+# run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
+vobj = voom(d_n, design, plot=TRUE, 
+            block=d_n$samples$ID, correlation=dupcor$consensus)
+#update the correlation for the new voom weights
+dupcor <- duplicateCorrelation(vobj, design, block = d_n$samples$ID)
+dupcor$consensus # the estimated intra individual correlation
+
+#analyzing repeated measures data using duplicateCorrelation.
+#The model forces the magnitude of the random effect to be the same across all genes.
+# Estimate linear mixed model with a single variance component
+# Fit the model for each gene
+# But this step uses only the genome-wide average for the random effect
+vfit <- lmFit(vobj, design, block=d_n$samples$ID, correlation=dupcor$consensus)
+vfit <- contrasts.fit(vfit, contrasts=contr.matrix)
+# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
+efit <- eBayes(vfit)
+topTable(efit, n=20)
+plotSA(efit, main="Final model: Mean-variance trend")
+plotMD(efit)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit$F
+head(efit$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
+head(efit$p.value) #same
+summary(decideTests(efit, adjust.method="fdr"))
+#set log-fold-changes (log-FCs) to be above a minimum value. The treat method (McCarthy and Smyth 2009) used to calculate p-values from empirical Bayes moderated t-statistics with a minimum log-FC requirement. 
+#no need to use the ebayes output for this
+lfc<-0.14
+tfit <- treat(vfit, lfc=lfc) #(means that the expression of that gene is increased by a multiplicative factor of 2^0.14 ≈ 1.101905).
+topTreat(tfit)
+nrow(tfit)
+dt <- decideTests(tfit, adjust.method="fdr")
+summary(dt) 
+plotMD(tfit, column=1, status=dt[,1], main=colnames(tfit)[1])
+
+nrow(tfit)
+results<-as.data.frame(topTreat(tfit, n=12594))
+results_pups2<-subset(results_pups, results_pups$logFC >= 0.14)
+results_pups3<-subset(results_pups, results_pups$logFC <= -0.14)
+result<-rbind(results_pups2,results_pups3)
+result$adj.P.r <- round(result$adj.P.Val, digits = 2)
+result2<-subset(result, result$adj.P.r < 0.05)
+nrow(subset(result2, result2$logFC > 0))
+nrow(subset(result2, result2$logFC < 0))
+```
+
