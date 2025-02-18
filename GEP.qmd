@@ -1,0 +1,38 @@
+---
+title: "Gene expression project"
+subtitle: "Analysis script"
+author: "Bernice Sepers & Ane Liv Berthelsen"
+
+format:
+  html: 
+  #pdf: 
+    papersize: "a4paper"
+    toc: true
+    toc-depth: 3
+    toc-title: "Contents"
+    number-sections: FALSE
+    documentclass: article
+    geometry:
+      - inner=3cm
+      - outer=3cm
+      - top=2cm
+      - bottom=3cm
+      - headsep=22pt
+      - headheight=11pt
+      - footskip=33pt
+      - ignorehead
+      - ignorefoot
+      - heightrounded
+    fig-pos: 'h'
+    fig-cap-location: bottom
+    tbl-cap-location: top
+editor: visual
+date: 11/20/2023
+mainfont: Times New Roman
+---
+
+```{r}
+#install.packages("here")
+#library(here)
+here::here()
+```
