@@ -53,17 +53,53 @@ invisible(pacman::p_load(dplyr, tidyverse, cowplot, edgeR, DESeq2))
 ```{r}
 #| label: load_data
 #| echo: FALSE
-
+#Load in the filtered data
 d_n<-readRDS("rnaseq_filtered_Liv.Rdata")
+#dim(d_n) 12639 rows
 ```
 
+#Visualize data
 
+```{r}
+#| label: visualize_data
+#| echo: FALSE
+counts_per_million <- cpm(d_n)
+log_counts_per_million <- cpm(d_n, log = T)
+#Calculate mean and median value
+L <- mean(d_n$samples$lib.size) * 1e-6 #average library size in millions
+M <- median(d_n$samples$lib.size) * 1e-6 
+#c(L, M) #19.65813, 19.10705
+lcpm.cutoff <- log2(10/M + 2/L)
+
+library(RColorBrewer)
+library(ggplot2)
+library(reshape2)
+df_long <- data.frame(log_counts_per_million)
+df_long$Gene <- rownames(df_long)
+df_melted <- melt(df_long, id.vars = "Gene", variable.name = "Sample", value.name = "LogCPM")
+
+#costum color palette
+palette_200 <- colorRampPalette(brewer.pal(12, "Paired"))(200)
+
+density_plot <- ggplot(df_melted, aes(x = LogCPM, color = Sample)) +
+  geom_density(size = 0.5) + 
+  scale_color_manual(values = palette_200) + 
+  geom_vline(xintercept = lcpm.cutoff, linetype = "dashed", color = "black") +  # Add cutoff line
+  labs(title = "Filtered Data", x = "Log-cpm", y = "Density") +
+  theme_classic() +
+  theme(legend.position = "none") +
+  ylim(0,0.20)
+
+# Save the density plot as a PNG file
+ggsave("density_plot.png", plot = density_plot, width = 12, height = 8, dpi = 600)
+
+```
 
 # Analysis by Bernice
+An example analysis where Bernice assessed differential expression per gene between the two time points (start vs end).
 
 ```{r}
 ##-------------- ANALYSIS OF TIME POINT --------------##
-
 d_n$samples$group <- as.factor(d_n$samples$group) # group = timepoint (start or end)
 d_n$samples$ID <- as.factor(d_n$samples$ID)
 design <- model.matrix(~ -1 + group, data = d_n$samples) #setting up model contrasts is more straight forward in the absence of an intercept for timepoint
@@ -79,13 +115,13 @@ vobj_tmp <- voom(d_n, design, plot=TRUE)
 # Fit a random effect
 dupcor <- duplicateCorrelation(vobj_tmp, design, block = d_n$samples$ID)
 dupcor$consensus #the estimated intra individual correlation
-#the intra ind correlation will change the voom weights slightly
-# run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
+#the intra individual correlation will change the voom weights slightly
+#run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
 vobj = voom(d_n, design, plot=TRUE, 
             block=d_n$samples$ID, correlation=dupcor$consensus)
 #update the correlation for the new voom weights
 dupcor <- duplicateCorrelation(vobj, design, block = d_n$samples$ID)
-dupcor$consensus # the estimated intra individual correlation
+dupcor$consensus #the estimated intra individual correlation
 
 #analyzing repeated measures data using duplicateCorrelation.
 #The model forces the magnitude of the random effect to be the same across all genes.
@@ -108,7 +144,7 @@ head(efit$p.value) #same
 summary(decideTests(efit, adjust.method="fdr"))
 #set log-fold-changes (log-FCs) to be above a minimum value. The treat method (McCarthy and Smyth 2009) used to calculate p-values from empirical Bayes moderated t-statistics with a minimum log-FC requirement. 
 #no need to use the ebayes output for this
-lfc<-0.14
+lfc<-0.14 #threshold set by Bernice to differentiate between differentially expressed genes
 tfit <- treat(vfit, lfc=lfc) #(means that the expression of that gene is increased by a multiplicative factor of 2^0.14 ≈ 1.101905).
 topTreat(tfit)
 nrow(tfit)
@@ -127,3 +163,63 @@ nrow(subset(result2, result2$logFC > 0))
 nrow(subset(result2, result2$logFC < 0))
 ```
 
+# Analysis 
+
+## Differential expression per gene between the life stages
+
+```{r}
+d_n$samples$life_history_stage <- as.factor(d_n$samples$life_history_stage) #life history stage as factor
+#Create a design matrix
+design_lhs <- model.matrix(~ -1 + life_history_stage, data = d_n$samples) #model contrasts without intercept is easier
+colnames(design_lhs) <- gsub("life_history_stage", "", colnames(design_lhs)) #clean group names
+
+#create matrix for contrasts
+contr.matrix.lhs <- makeContrasts(
+  adultvspup = Mother-Pup,
+  levels = colnames(design_lhs)) 
+
+#voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
+vobj_lhs <- voom(d_n, design_lhs, plot=TRUE)
+
+# Fit a random effect
+dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
+#dupcor_lhs$consensus #the estimated intra individual correlation (0.13086)
+#the intra individual correlation will change the voom weights slightly
+#run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
+vobj_lhs = voom(d_n, design_lhs, plot=TRUE, 
+            block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
+#update the correlation for the new voom weights
+dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
+#dupcor_lhs$consensus #the estimated intra individual correlation (0.1308769)
+
+#Analyzing repeated measures data using duplicateCorrelation.
+#The model forces the magnitude of the random effect to be the same across all genes.
+
+
+#Estimate linear mixed model with a single variance component
+vfit_lhs <- lmFit(vobj_lhs, design_lhs, block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
+vfit_lhs <- contrasts.fit(vfit_lhs, contrasts=contr.matrix.lhs)
+# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
+efit_lhs <- eBayes(vfit_lhs)
+topTable(efit_lhs, n=20)
+plotSA(efit_lhs, main="Final model: Mean-variance trend")
+plotMD(efit_lhs)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit_lhs$F
+#head(efit_lhs$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
+#head(efit_lhs$p.value) #same
+summary(decideTests(efit_lhs, adjust.method="fdr"))
+#set log-fold-changes (log-FCs) to be above a minimum value. The treat method (McCarthy and Smyth 2009) used to calculate p-values from empirical Bayes moderated t-statistics with a minimum log-FC requirement. 
+#no need to use the ebayes output for this
+lfc_lhs <- 1 #log fold change of 1 is pretty standard but explore further
+tfit_lhs <- treat(vfit_lhs, lfc=lfc_lhs) 
+topTreat(tfit_lhs)
+nrow(tfit_lhs)
+dt_lhs <- decideTests(tfit_lhs, adjust.method="fdr")
+summary(dt_lhs) 
+plotMD(tfit_lhs, column=1, status=dt_lhs[,1], main=colnames(tfit_lhs)[1])
+
+
+```
