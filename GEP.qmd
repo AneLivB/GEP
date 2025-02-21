@@ -94,8 +94,14 @@ density_plot <- ggplot(df_melted, aes(x = LogCPM, color = Sample)) +
 ggsave("density_plot.png", plot = density_plot, width = 12, height = 8, dpi = 600)
 
 ```
+# Differential gene expression analysis
 
-# Analysis by Bernice
+```{r}
+clrs <- c("cornflowerblue", "grey20", "plum3")
+```
+
+
+## Time point: Analysis by Bernice
 An example analysis where Bernice assessed differential expression per gene between the two time points (start vs end).
 
 ```{r}
@@ -144,28 +150,40 @@ head(efit$p.value) #same
 summary(decideTests(efit, adjust.method="fdr"))
 #set log-fold-changes (log-FCs) to be above a minimum value. The treat method (McCarthy and Smyth 2009) used to calculate p-values from empirical Bayes moderated t-statistics with a minimum log-FC requirement. 
 #no need to use the ebayes output for this
-lfc<-0.14 #threshold set by Bernice to differentiate between differentially expressed genes
+#lfc<-0.14 #threshold set by Bernice to differentiate between differentially expressed genes
+lfc<-1
 tfit <- treat(vfit, lfc=lfc) #(means that the expression of that gene is increased by a multiplicative factor of 2^0.14 ≈ 1.101905).
 topTreat(tfit)
 nrow(tfit)
 dt <- decideTests(tfit, adjust.method="fdr")
 summary(dt) 
-plotMD(tfit, column=1, status=dt[,1], main=colnames(tfit)[1])
+#plotMD(tfit, column=1, status=dt[,1], main=colnames(tfit)[1])
+# As ggplot 
+# Extract the data 
+tp_data <- data.frame(AveExpr = tfit$Amean,  
+  logFC = tfit$coefficients[,1], 
+  Status = factor(dt[,1]))
 
-nrow(tfit)
-results<-as.data.frame(topTreat(tfit, n=12594))
-results_pups2<-subset(results_pups, results_pups$logFC >= 0.14)
-results_pups3<-subset(results_pups, results_pups$logFC <= -0.14)
-result<-rbind(results_pups2,results_pups3)
-result$adj.P.r <- round(result$adj.P.Val, digits = 2)
-result2<-subset(result, result$adj.P.r < 0.05)
-nrow(subset(result2, result2$logFC > 0))
-nrow(subset(result2, result2$logFC < 0))
+tp_plot <- ggplot(tp_data, aes(x = AveExpr, y = logFC, color = Status, size = Status)) +
+  geom_point() +
+  scale_color_manual(values = clrs) +  
+  scale_size_manual(values = c(1.5, 0.5, 1.5)) +
+  labs(title = "End vs start", x = "Mean Expression (logCPM)", y = "Log Fold Change") +
+  theme_classic() +
+  theme(legend.position = "top")
+
+
+#nrow(tfit)
+#results<-as.data.frame(topTreat(tfit, n=12594))
+#results_pups2<-subset(results_pups, results_pups$logFC >= 0.14)
+#results_pups3<-subset(results_pups, results_pups$logFC <= 0.14)
+#result<-rbind(results_pups2,results_pups3)
+#result$adj.P.r <- round(result$adj.P.Val, digits = 2)
+#result2<-subset(result, result$adj.P.r < 0.05)
+#nrow(subset(result2, result2$logFC > 0))
+#nrow(subset(result2, result2$logFC < 0))
 ```
-
-# Analysis 
-
-## Differential expression per gene between the life stages
+## Life stages
 
 ```{r}
 d_n$samples$life_history_stage <- as.factor(d_n$samples$life_history_stage) #life history stage as factor
@@ -214,12 +232,173 @@ summary(decideTests(efit_lhs, adjust.method="fdr"))
 #set log-fold-changes (log-FCs) to be above a minimum value. The treat method (McCarthy and Smyth 2009) used to calculate p-values from empirical Bayes moderated t-statistics with a minimum log-FC requirement. 
 #no need to use the ebayes output for this
 lfc_lhs <- 1 #log fold change of 1 is pretty standard but explore further
+#a doubling in the original scaling is equal to a log2 fold change of 1
+#a quadrupling is equal to a log2 fold change of 2
+#Positive values means the gene is more expressed
 tfit_lhs <- treat(vfit_lhs, lfc=lfc_lhs) 
 topTreat(tfit_lhs)
 nrow(tfit_lhs)
 dt_lhs <- decideTests(tfit_lhs, adjust.method="fdr")
 summary(dt_lhs) 
-plotMD(tfit_lhs, column=1, status=dt_lhs[,1], main=colnames(tfit_lhs)[1])
+#plotMD(tfit_lhs, column=1, status=dt_lhs[,1], main=colnames(tfit_lhs)[1])
+# As ggplot 
+# Extract the data 
+lhs_data <- data.frame(AveExpr = tfit_lhs$Amean,  
+  logFC = tfit_lhs$coefficients[,1], 
+  Status = factor(dt_lhs[,1]))
+
+lhs_plot <- ggplot(lhs_data, aes(x = AveExpr, y = logFC, color = Status, size = Status)) +
+  geom_point() +
+  scale_color_manual(values = clrs) + 
+  scale_size_manual(values = c(1.5, 0.5, 1.5)) +
+  labs(title = "Adults vs Pups", x = "Mean Expression (logCPM)", y = "Log Fold Change") +
+  theme_classic() +
+  theme(legend.position = "top")
+```
+## Colony
+
+```{r}
+d_n$samples$colony <- as.factor(d_n$samples$colony) #colony as factor
+#Create a design matrix
+design_c <- model.matrix(~ -1 + colony, data = d_n$samples) #model contrasts without intercept is easier
+colnames(design_c) <- gsub("colony", "", colnames(design_c)) #clean group names
+
+#create matrix for contrasts
+contr.matrix.c <- makeContrasts(
+  SSBvsFWB = SSB-FWB,
+  levels = colnames(design_c)) 
+
+#voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
+vobj_c <- voom(d_n, design_c, plot=TRUE)
+
+# Fit a random effect
+dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n$samples$ID)
+#dupcor_c$consensus #the estimated intra individual correlation (0.1938427)
+#the intra individual correlation will change the voom weights slightly
+#run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
+vobj_c = voom(d_n, design_c, plot=TRUE, 
+            block=d_n$samples$ID, correlation=dupcor_c$consensus)
+#update the correlation for the new voom weights
+dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n$samples$ID)
+#dupcor_c$consensus #the estimated intra individual correlation (0.1938511)
+
+#Analyzing repeated measures data using duplicateCorrelation.
+#The model forces the magnitude of the random effect to be the same across all genes.
+
+#Estimate linear mixed model with a single variance component
+vfit_c <- lmFit(vobj_c, design_c, block=d_n$samples$ID, correlation=dupcor_c$consensus)
+vfit_c <- contrasts.fit(vfit_c, contrasts=contr.matrix.c)
+# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
+efit_c <- eBayes(vfit_c)
+topTable(efit_c, n=20)
+plotSA(efit_c, main="Final model: Mean-variance trend")
+plotMD(efit_c)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit_c$F
+#head(efit_c$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
+#head(efit_c$p.value) #same
+summary(decideTests(efit_c, adjust.method="fdr"))
+#set log-fold-changes (log-FCs) to be above a minimum value. The treat method (McCarthy and Smyth 2009) used to calculate p-values from empirical Bayes moderated t-statistics with a minimum log-FC requirement. 
+#no need to use the ebayes output for this
+lfc_c <- 1 #log fold change of 1 is pretty standard but explore further
+#a doubling in the original scaling is equal to a log2 fold change of 1
+#a quadrupling is equal to a log2 fold change of 2
+#Positive values means the gene is more expressed
+tfit_c <- treat(vfit_c, lfc=lfc_c) 
+topTreat(tfit_c)
+nrow(tfit_c)
+dt_c <- decideTests(tfit_c, adjust.method="fdr")
+summary(dt_c) 
+#plotMD(tfit_c, column=1, status=dt_c[,1], main=colnames(tfit_c)[1])
+# As ggplot 
+# Extract the data 
+c_data <- data.frame(AveExpr = tfit_c$Amean,  
+  logFC = tfit_c$coefficients[,1], 
+  Status = factor(dt_c[,1]))
+
+c_plot <- ggplot(c_data, aes(x = AveExpr, y = logFC, color = Status, size = Status)) +
+  geom_point() +
+  scale_color_manual(values = "grey20") +  
+  scale_size_manual(values = 0.5) +
+  labs(title = "SSB vs FWB", x = "Mean Expression (logCPM)", y = "Log Fold Change") +
+  theme_classic() +
+  theme(legend.position = "top")
+```
+
+## Season
+
+```{r}
+d_n$samples$year <- as.factor(d_n$samples$year) #year as factor
+#Create a design matrix
+design_y <- model.matrix(~ -1 + year, data = d_n$samples) #model contrasts without intercept is easier
+colnames(design_y) <- c("Season1", "Season2") #clean group names
+#create matrix for contrasts
+contr.matrix.y <- makeContrasts(
+  Season1vsSeason2 = Season1-Season2,
+  levels = colnames(design_y)) 
+
+#voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
+vobj_y <- voom(d_n, design_y, plot=TRUE)
+
+# Fit a random effect
+dupcor_y <- duplicateCorrelation(vobj_y, design_y, block = d_n$samples$ID)
+#dupcor_y$consensus #the estimated intra individual correlation (0.1672733)
+#the intra individual correlation will change the voom weights slightly
+#run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
+vobj_y = voom(d_n, design_y, plot=TRUE, 
+            block=d_n$samples$ID, correlation=dupcor_y$consensus)
+#update the correlation for the new voom weights
+dupcor_y <- duplicateCorrelation(vobj_y, design_y, block = d_n$samples$ID)
+#dupcor_y$consensus #the estimated intra individual correlation (0.1672867)
+
+#Analyzing repeated measures data using duplicateCorrelation.
+#The model forces the magnitude of the random effect to be the same across all genes.
+
+#Estimate linear mixed model with a single variance component
+vfit_y <- lmFit(vobj_y, design_y, block=d_n$samples$ID, correlation=dupcor_y$consensus)
+vfit_y <- contrasts.fit(vfit_y, contrasts=contr.matrix.y)
+# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
+efit_y <- eBayes(vfit_y)
+topTable(efit_y, n=20)
+plotSA(efit_y, main="Final model: Mean-variance trend")
+plotMD(efit_y)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit_y$F
+#head(efit_y$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
+#head(efit_y$p.value) #same
+summary(decideTests(efit_y, adjust.method="fdr"))
+#set log-fold-changes (log-FCs) to be above a minimum value. The treat method (McCarthy and Smyth 2009) used to calculate p-values from empirical Bayes moderated t-statistics with a minimum log-FC requirement. 
+#no need to use the ebayes output for this
+lfc_y <- 1 #log fold change of 1 is pretty standard but explore further
+#a doubling in the original scaling is equal to a log2 fold change of 1
+#a quadrupling is equal to a log2 fold change of 2
+#Positive values means the gene is more expressed
+tfit_y <- treat(vfit_y, lfc=lfc_y) 
+topTreat(tfit_y)
+nrow(tfit_y)
+dt_y <- decideTests(tfit_y, adjust.method="fdr")
+summary(dt_y) 
+#plotMD(tfit_y, column=1, status=dt_y[,1], main=colnames(tfit_y)[1])
+# As ggplot 
+# Extract the data 
+y_data <- data.frame(AveExpr = tfit_y$Amean,  
+  logFC = tfit_y$coefficients[,1], 
+  Status = factor(dt_y[,1]))
+
+y_plot <- ggplot(y_data, aes(x = AveExpr, y = logFC, color = Status, size = Status)) +
+  geom_point() +
+  scale_color_manual(values = "grey20") +  
+  scale_size_manual(values = 0.5) +
+  labs(title = "2018 vs 2019", x = "Mean Expression (logCPM)", y = "Log Fold Change") +
+  theme_classic() +
+  theme(legend.position = "top")
 
 
+library(cowplot)
+
+plot_grid(y_plot, lhs_plot, c_plot, tp_plot)
 ```
