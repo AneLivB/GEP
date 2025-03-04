@@ -311,7 +311,6 @@ lhs_plot <- ggplot(Allgenes_lhs, aes(x = AveExpr, y = logFC, color = Significanc
 # #save dupcor_c
 # saveRDS(dupcor_c, file = here::here("Dupcor","dupcor_c.rds"))
 
-
 #Load dupcor_c
 dupcor_c <- readRDS(here::here("Dupcor","dupcor_c.rds"))
 
@@ -444,6 +443,7 @@ y_plot <- ggplot(Allgenes_y, aes(x = AveExpr, y = logFC, color = Significance, s
   theme_classic() +
   theme(legend.position = "top")
 ```
+
 ```{r}
 #Bind plots together
 library(cowplot)
@@ -455,119 +455,7 @@ ggsave(here::here("Plots","DEG_all.png"), plot = DEG_all, width = 12, height = 8
 # Interactions
 
 ```{r}
-#In this, we will test for interactions between life stage and season
-#Both terms are used previously, so we do not need to convert them to factors!
-
-# Create a design matrix including life history stage and its interaction with year
-design_interaction <- model.matrix(~ year*life_history_stage, data = d_n$samples)  # No intercept
-#Clean column names
-colnames(design_interaction) <- c("Season1", "Season2", "Pup", "Season2_Pup")
-
-# Define contrasts (compare seasons while accounting for life stage)
-contr.matrix.interaction <- makeContrasts(
-  Season1vsSeason2_adults = Season1 - Season2, 
-  Season1vsSeason2_Pup = (Season1 + Pup) - (Season2 + Season2_Pup),
-  PupvsAdult_Season1 = Pup,  
-  PupvsAdult_Season2 = Pup + Season2_Pup,  
-  Interaction = Season2_Pup, 
-  levels = colnames(design_interaction)) 
-
-# Run voom() to transform count data
-vobj_interaction <- voom(d_n, design_interaction, plot=TRUE)
-
-# Fit a random effect using duplicateCorrelation
-dupcor_interaction <- duplicateCorrelation(vobj_interaction, design_interaction, block = d_n$samples$ID)
-
-# Re-run voom with updated precision weights
-vobj_interaction <- voom(d_n, design_interaction, plot=TRUE, 
-               block=d_n$samples$ID, correlation=dupcor_interaction$consensus)
-
-dupcor_interaction <- duplicateCorrelation(vobj_interaction, design_interaction, block = d_n$samples$ID)
-
-#Estimate linear mixed model with a single variance component
-vfit_interaction <- lmFit(vobj_interaction, design_interaction, block=d_n$samples$ID, correlation=dupcor_interaction$consensus)
-vfit_interaction <- contrasts.fit(vfit_interaction, contrasts=contr.matrix.interaction)
-# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
-efit_interaction <- eBayes(vfit_interaction)
-topTable(efit_interaction, n=20)
-plotSA(efit_interaction, main="Final model: Mean-variance trend")
-plotMD(efit_interaction)
-abline(h=0,col="darkgrey")
-
-interaction_results <- topTable(efit_interaction, coef="Interaction", number=Inf, sort.by="P")
-
-# Create a new column to categorize genes
-interaction_results$Significance <- "Not Significant"
-interaction_results$Significance[interaction_results$adj.P.Val < 0.05 & interaction_results$logFC >= 0.5] <- "Upregulated"
-interaction_results$Significance[interaction_results$adj.P.Val < 0.05 & interaction_results$logFC <= -0.5] <- "Downregulated"
-
-# Plot volcano plot
-ggplot(interaction_results, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
-  geom_point(alpha = 0.7) +
-  scale_color_manual(values = c("Upregulated" = "plum3", "Downregulated" = "cornflowerblue", "Not Significant" = "grey20")) +
-  scale_size_manual(values = c("Upregulated" = 1.5, "Downregulated" = 1.5, "Not Significant" = 0.5)) +
-  labs(title = "Differential Expression from Season x Life Stage Interaction",
-       x = "Log2 Fold Change",
-       y = "-Log10 P-value") +
-  theme_classic()
-
-# Difference between seasons in adults
-Season1vsSeason2_adults_results <- topTable(efit_interaction, coef="Season1vsSeason2_adults", number=Inf, sort.by="P")
-
-# Create a new column to categorize genes
-Season1vsSeason2_adults_results$Significance <- "Not Significant"
-Season1vsSeason2_adults_results$Significance[Season1vsSeason2_adults_results$adj.P.Val < 0.05 & Season1vsSeason2_adults_results$logFC >= 1] <- "Upregulated"
-Season1vsSeason2_adults_results$Significance[Season1vsSeason2_adults_results$adj.P.Val < 0.05 & Season1vsSeason2_adults_results$logFC <= -1] <- "Downregulated"
-
-# Plot volcano plot
-S_adults <- ggplot(Season1vsSeason2_adults_results, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
-  geom_point(alpha = 0.7) +
-  scale_color_manual(values = c("Upregulated" = "plum3", "Downregulated" = "cornflowerblue", "Not Significant" = "grey20")) +
-  scale_size_manual(values = c("Upregulated" = 1.5, "Downregulated" = 1.5, "Not Significant" = 0.5)) +
-  labs(title = "Differential Expression from Season1vsSeason2_adults",
-       x = "Log2 Fold Change",
-       y = "-Log10 P-value") +
-  theme_classic()
-
-# Difference between seasons in pups
-Season1vsSeason2_Pup_results <- topTable(efit_interaction, coef="Season1vsSeason2_Pup", number=Inf, sort.by="P")
-
-# Create a new column to categorize genes
-Season1vsSeason2_Pup_results$Significance <- "Not Significant"
-Season1vsSeason2_Pup_results$Significance[Season1vsSeason2_Pup_results$adj.P.Val < 0.05 & Season1vsSeason2_Pup_results$logFC >= 1] <- "Upregulated"
-Season1vsSeason2_Pup_results$Significance[Season1vsSeason2_Pup_results$adj.P.Val < 0.05 & Season1vsSeason2_Pup_results$logFC <= -1] <- "Downregulated"
-
-# Plot volcano plot
-S_pups <- ggplot(Season1vsSeason2_Pup_results, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
-  geom_point(alpha = 0.7) +
-  scale_color_manual(values = c("Upregulated" = "plum3", "Downregulated" = "cornflowerblue", "Not Significant" = "grey20")) +
-  scale_size_manual(values = c("Upregulated" = 1.5, "Downregulated" = 1.5, "Not Significant" = 0.5)) +
-  labs(title = "Differential Expression from Season1vsSeason2_Pup",
-       x = "Log2 Fold Change",
-       y = "-Log10 P-value") +
-  theme_classic()
-
-#Difference between life stage in season 1
-PupvsAdult_Season1_results <- topTable(efit_interaction, coef="PupvsAdult_Season1", number=Inf, sort.by="P")
-
-# Create a new column to categorize genes
-PupvsAdult_Season1_results$Significance <- "Not Significant"
-PupvsAdult_Season1_results$Significance[PupvsAdult_Season1_results$adj.P.Val < 0.05 & PupvsAdult_Season1_results$logFC >= 1] <- "Upregulated"
-PupvsAdult_Season1_results$Significance[PupvsAdult_Season1_results$adj.P.Val < 0.05 & PupvsAdult_Season1_results$logFC <= -1] <- "Downregulated"
-
-# Plot volcano plot
-LS_Season1 <- ggplot(PupvsAdult_Season1_results, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
-  geom_point(alpha = 0.7) +
-  scale_color_manual(values = c("Upregulated" = "plum3", "Downregulated" = "cornflowerblue", "Not Significant" = "grey20")) +
-  scale_size_manual(values = c("Upregulated" = 1.5, "Downregulated" = 1.5, "Not Significant" = 0.5)) +
-  labs(title = "Differential Expression from PupvsAdult_Season1",
-       x = "Log2 Fold Change",
-       y = "-Log10 P-value") +
-  theme_classic()
-
-#Difference between life stage in season 2
-PupvsAdult_Season2_results <- topTable(efit_interaction, coef="PupvsAdult_Season2", number=Inf, sort.by="P")
-
+#just to remember this code for volcano plots
 # Create a new column to categorize genes
 PupvsAdult_Season2_results$Significance <- "Not Significant"
 PupvsAdult_Season2_results$Significance[PupvsAdult_Season2_results$adj.P.Val < 0.05 & PupvsAdult_Season2_results$logFC >= 1] <- "Upregulated"
@@ -592,6 +480,7 @@ DEG_interaction_all <- plot_grid(S_adults, S_pups, LS_Season1, LS_Season2)
 # Save the density plot as a PNG file
 ggsave(here::here("Plots","DEG_interaction_all.png"), plot = DEG_interaction_all, width = 12, height = 8, dpi = 600)
 ```
+## Year and life history stage interaction
 ```{r}
 #Simple interaction (limma manual 9.5.2)
 #Create a design matrix including life history stage and its interaction with year
@@ -646,16 +535,17 @@ efit_interaction$F
 #head(efit_y$p.value) #same
 summary(decideTests(efit_interaction, adjust.method="fdr"))
 
-tfit_interaction <- treat(vfit_interaction, lfc=lfc_half) 
+tfit_interaction <- treat(vfit_interaction, lfc=lfc) 
 topTreat(tfit_interaction)
 nrow(tfit_interaction)
 dt_interaction <- decideTests(tfit_interaction, adjust.method="fdr")
 summary(dt_interaction) 
 ```
+## Year and colony interaction
 
 ```{r}
 #Simple interaction (limma manual 9.5.2)
-#Create a design matrix including life history stage and its interaction with year
+#Create a design matrix including life history stage and its interaction with colony
 d_n$samples$y.colony <- as.factor(paste(d_n$samples$year, d_n$samples$colony, sep = "."))
 design_interaction2 <- model.matrix(~ 0+y.colony, data = d_n$samples)  # No intercept
 #Clean column names
@@ -707,9 +597,158 @@ efit_interaction2$F
 #head(efit_y$p.value) #same
 summary(decideTests(efit_interaction2, adjust.method="fdr"))
 
-tfit_interaction2 <- treat(vfit_interaction2, lfc=lfc_half) 
+tfit_interaction2 <- treat(vfit_interaction2, lfc=lfc) 
 topTreat(tfit_interaction2)
 nrow(tfit_interaction2)
 dt_interaction2 <- decideTests(tfit_interaction2, adjust.method="fdr")
 summary(dt_interaction2) 
+```
+
+## Time point and life stage interaction
+
+```{r}
+#Simple interaction (limma manual 9.5.2)
+#Create a design matrix including life history stage and its interaction with colony
+d_n$samples$tp.lhs <- as.factor(paste(d_n$samples$group, d_n$samples$life_history_stage, sep = "."))
+design_interaction3 <- model.matrix(~ 0+tp.lhs, data = d_n$samples)  # No intercept
+#Clean column names
+colnames(design_interaction3) <- c("Start.Mum", "Start.Pup", "End.Mum", "End.Pup")
+
+# #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
+vobj_interaction3 <- voom(d_n, design_interaction3, plot=TRUE)
+
+#Fit a random effect
+dupcor_interaction3 <- duplicateCorrelation(vobj_interaction3, design_interaction3, block = d_n$samples$ID)
+# #dupcor_interaction3$consensus #the estimated intra individual correlation (0.2608585)
+
+vobj_interaction3 = voom(d_n, design_interaction3, plot=TRUE, 
+                        block=d_n$samples$ID, correlation=dupcor_interaction3$consensus)
+# #update the correlation for the new voom weights
+dupcor_interaction3 <- duplicateCorrelation(vobj_interaction3, design_interaction3, block = d_n$samples$ID)
+# #dupcor_interaction3$consensus #the estimated intra individual correlation (0.2909559)
+# 
+# #save dupcor_y
+# saveRDS(dupcor_y, file = here::here("Dupcor","dupcor_y.rds"))
+#Load dupcor_y
+# dupcor_y <- readRDS(here::here("Dupcor","dupcor_y.rds"))
+
+
+#Estimate linear mixed model with a single variance component
+vfit_interaction3 <- lmFit(vobj_interaction3, design_interaction3, block=d_n$samples$ID, correlation=dupcor_interaction3$consensus)
+
+#Fit the contrasts we are interested in
+cont.matrix.interaction3 <- makeContrasts(
+  EndvsStartMum = End.Mum - Start.Mum, #which genes in mothers are DE among tp
+  EndvsStartPup = End.Pup - Start.Pup,  #which genes in pups are DE among tp
+  StartLHS = Start.Mum - Start.Pup, #which genes in tp 1 are DE among lhs
+  EndLHS = End.Mum - End.Pup, #which genes in tp 2 are DE among lhs
+  Interaction = (End.Mum - End.Pup)-(Start.Mum - Start.Pup), #which genes respond differently over time in mums compared to pups
+  levels = colnames(design_interaction3)
+)
+
+vfit_interaction3 <- contrasts.fit(vfit_interaction3, contrasts=cont.matrix.interaction3)
+# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
+efit_interaction3 <- eBayes(vfit_interaction3)
+topTable(efit_interaction3, n=20)
+plotSA(efit_interaction3, main="Final model: Mean-variance trend")
+plotMD(efit_interaction3)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit_interaction3$F
+#head(efit_interaction3$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
+#head(efit_interaction3$p.value) #same (not the same?)
+summary(decideTests(efit_interaction3, adjust.method="fdr"))
+
+tfit_interaction3 <- treat(vfit_interaction3, lfc=lfc) 
+topTreat(tfit_interaction3)
+topTreat(tfit_interaction3, coef = "Interaction") #specific for the interaction
+nrow(tfit_interaction3)
+dt_interaction3 <- decideTests(tfit_interaction3, adjust.method="fdr")
+summary(dt_interaction3) 
+```
+
+# Controlling for genetic effects
+To control for genetic effects, we include a second block 'pair', which contains the mum-pup pair id.
+
+## Colony
+
+```{r}
+#Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
+#Create a design matrix
+design_c <- model.matrix(~ -1 + colony, data = d_n$samples) #model contrasts without intercept is easier
+colnames(design_c) <- gsub("colony", "", colnames(design_c)) #clean group names
+#
+#create matrix for contrasts
+contr.matrix.c <- makeContrasts(
+   SSBvsFWB = SSB-FWB,
+   levels = colnames(design_c)) 
+
+#voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
+vobj_c <- voom(d_n, design_c, plot=TRUE)
+#Fit a random effect
+dupcor_c2 <- duplicateCorrelation(vobj_c, design_c, block = list(d_n$samples$ID, d_n$samples$pair))
+dupcor_c2$consensus #the estimated intra individual correlation (0.1938427)
+#the intra individual correlation will change the voom weights slightly
+# #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
+# vobj_c = voom(d_n, design_c, plot=TRUE, 
+#             block=d_n$samples$ID, correlation=dupcor_c$consensus)
+# #update the correlation for the new voom weights
+# dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n$samples$ID)
+# #dupcor_c$consensus #the estimated intra individual correlation (0.1938511)
+#
+# #save dupcor_c
+# saveRDS(dupcor_c, file = here::here("Dupcor","dupcor_c.rds"))
+
+#Load dupcor_c
+dupcor_c <- readRDS(here::here("Dupcor","dupcor_c.rds"))
+
+#Analyzing repeated measures data using duplicateCorrelation.
+#The model forces the magnitude of the random effect to be the same across all genes.
+
+#Estimate linear mixed model with a single variance component
+vfit_c <- lmFit(vobj_c, design_c, block=d_n$samples$ID, correlation=dupcor_c$consensus)
+vfit_c <- contrasts.fit(vfit_c, contrasts=contr.matrix.c)
+# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
+efit_c <- eBayes(vfit_c)
+topTable(efit_c, n=20)
+plotSA(efit_c, main="Final model: Mean-variance trend")
+plotMD(efit_c)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit_c$F
+#head(efit_c$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
+#head(efit_c$p.value) #same
+summary(decideTests(efit_c, adjust.method="fdr"))
+#set log-fold-changes (log-FCs) to be above a minimum value. The treat method (McCarthy and Smyth 2009) used to calculate p-values from empirical Bayes moderated t-statistics with a minimum log-FC requirement. 
+#no need to use the ebayes output for this
+
+#Positive values means the gene is more expressed
+tfit_c <- treat(vfit_c, lfc=lfc) 
+topTreat(tfit_c)
+nrow(tfit_c)
+dt_c <- decideTests(tfit_c, adjust.method="fdr")
+summary(dt_c) 
+
+#Test for significance
+Allgenes_c <- as.data.frame(topTreat(tfit_c, n=nrow(tfit_c)))
+Filteredgenes_c <- subset(Allgenes_c, abs(logFC) >= lfc & round(adj.P.Val, 2) < adj.P.value)
+nrow(subset(Filteredgenes_c, Filteredgenes_c$logFC > 0))
+nrow(subset(Filteredgenes_c, Filteredgenes_c$logFC < 0))
+
+#Plot the outcome
+Allgenes_c$Significance <- "Not Significant"
+Allgenes_c$Significance[Allgenes_c$adj.P.Val < adj.P.value & Allgenes_c$logFC >= lfc] <- "Upregulated"
+Allgenes_c$Significance[Allgenes_c$adj.P.Val < adj.P.value & Allgenes_c$logFC <= lfc] <- "Downregulated"
+
+#Plot DEG
+c_plot <- ggplot(Allgenes_c, aes(x = AveExpr, y = logFC, color = Significance, size = Significance)) +
+  geom_point() +
+  scale_color_manual(values = clrs) +  
+  scale_size_manual(values = 0.5) +
+  labs(title = "SSB vs FWB", x = "Mean Expression (logCPM)", y = "Log Fold Change") +
+  theme_classic() +
+  theme(legend.position = "top")
+
 ```
