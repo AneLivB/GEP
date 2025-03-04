@@ -129,35 +129,37 @@ An example analysis where Bernice assessed differential expression per gene betw
 # # voom converts raw counts to log-CPM values by automatically extracting library sizes and normalisation factors from d itself. 
 # #  If filtering of lowly-expressed genes is insufficient, a drop in variance levels can be observed at the low end of the expression scale due to very small counts.
 # #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-# vobj_tmp <- voom(d_n, design, plot=TRUE)
+# vobj_tp <- voom(d_n, design, plot=TRUE)
 #
 # # Fit a random effect
-# dupcor_tp <- duplicateCorrelation(vobj_tmp, design, block = d_n$samples$ID)
+# dupcor_tp <- duplicateCorrelation(vobj_tp, design, block = d_n$samples$ID)
 # dupcor_tp$consensus #the estimated intra individual correlation (0.2988794)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
 # vobj = voom(d_n, design, plot=TRUE, 
-#            block=d_n$samples$ID, correlation=dupcor_tp$consensus)
+#           block=d_n$samples$ID, correlation=dupcor_tp$consensus)
 # #update the correlation for the new voom weights
 # dupcor_tp <- duplicateCorrelation(vobj, design, block = d_n$samples$ID)
 # dupcor_tp$consensus #the estimated intra individual correlation (0.2989905)
 #
-# #save dupcor_tp
-# saveRDS(dupcor_tp, file = here::here("Dupcor","dupcor_tp.rds"))
-
-
-#Load dupcor_tp
-dupcor_tp <- readRDS(here::here("Dupcor","dupcor_tp.rds"))
-
+# #Fit the model
 #analyzing repeated measures data using duplicateCorrelation.
 #The model forces the magnitude of the random effect to be the same across all genes.
 # Estimate linear mixed model with a single variance component
 # Fit the model for each gene
 # But this step uses only the genome-wide average for the random effect
-vfit <- lmFit(vobj, design, block=d_n$samples$ID, correlation=dupcor_tp$consensus)
-vfit <- contrasts.fit(vfit, contrasts=contr.matrix)
+# vfit_tp <- lmFit(vobj, design, block=d_n$samples$ID, correlation=dupcor_tp$consensus)
+# vfit_tp <- contrasts.fit(vfit_tp, contrasts=contr.matrix)
+#
+#Save the model to avoid recomputing everything
+# #save vfit_tp
+# saveRDS(vfit_tp, file = here::here("Models","vfit_tp.rds"))
+#
+#Load vfit_tp
+vfit_tp <- readRDS(here::here("Models","vfit_tp.rds"))
+
 # Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
-efit <- eBayes(vfit)
+efit <- eBayes(vfit_tp)
 topTable(efit, n=20)
 plotSA(efit, main="Final model: Mean-variance trend")
 plotMD(efit)
@@ -172,7 +174,7 @@ summary(decideTests(efit, adjust.method="fdr"))
 #no need to use the ebayes output for this
 #lfc<-0.14 #threshold set by Bernice to differentiate between differentially expressed genes
 
-tfit <- treat(vfit, lfc=lfc) #lfc = 1, lfc_half = 0.5
+tfit <- treat(vfit_tp, lfc=lfc_half) #lfc = 1, lfc_half = 0.5
 topTreat(tfit)
 nrow(tfit)
 dt <- decideTests(tfit, adjust.method="fdr")
@@ -180,14 +182,24 @@ summary(dt)
 
 #Test for significance
 Allgenes_tp <- as.data.frame(topTreat(tfit, n=nrow(tfit)))
-Filteredgenes_tp <- subset(Allgenes_tp, abs(logFC) >= lfc & round(adj.P.Val, 2) < adj.P.value)
+Filteredgenes_tp <- subset(Allgenes_tp, abs(logFC) >= lfc_half & round(adj.P.Val, 2) < adj.P.value)
+Upregulated_tp <-subset(Filteredgenes_tp, Filteredgenes_tp$logFC >= lfc_half)
+Downregulated_tp <-subset(Filteredgenes_tp, Filteredgenes_tp$logFC <= lfc_half)
 nrow(subset(Filteredgenes_tp, Filteredgenes_tp$logFC > 0))
 nrow(subset(Filteredgenes_tp, Filteredgenes_tp$logFC < 0))
 
+# Create a list to save the up and down regulated genes and the df containing all genes evaluated for GO analysis
+tp_list <- list(All_tp = Allgenes_tp, Upregulated_tp = Upregulated_tp, Downregulated_tp = Downregulated_tp)
+
+# Loop through and save each data frame using `here()`
+for (name in names(tp_list)) {
+  write.csv(tp_list[[name]], file = here::here("GenesGO", paste0(name, ".csv")), row.names = FALSE)
+}
+
 #Plot the outcome
 Allgenes_tp$Significance <- "Not Significant"
-Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC >= lfc] <- "Upregulated"
-Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC <= lfc] <- "Downregulated"
+Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC >= lfc_half] <- "Upregulated"
+Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC <= lfc_half] <- "Downregulated"
 
 #Plot DEG
 tp_plot <- ggplot(Allgenes_tp, aes(x = AveExpr, y = logFC, color = Significance, size = Significance)) +
