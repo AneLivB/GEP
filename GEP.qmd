@@ -208,6 +208,7 @@ tp_plot <- ggplot(Allgenes_tp, aes(x = AveExpr, y = logFC, color = Significance,
   scale_size_manual(values = c(1.5, 0.5, 1.5)) +
   labs(title = "End vs start", x = "Mean Expression (logCPM)", y = "Log Fold Change") +
   theme_classic() +
+  ylim(-4.1,4.1) +
   theme(legend.position = "top")
 ```
 ## Life stages
@@ -228,29 +229,29 @@ tp_plot <- ggplot(Allgenes_tp, aes(x = AveExpr, y = logFC, color = Significance,
 # 
 # # Fit a random effect
 # dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
-# #dupcor_lhs$consensus #the estimated intra individual correlation (0.13086)
+# dupcor_lhs$consensus #the estimated intra individual correlation (0.13086)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
 # vobj_lhs = voom(d_n, design_lhs, plot=TRUE, 
-#             block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
+#           block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
 # #update the correlation for the new voom weights
 # dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
-# #dupcor_lhs$consensus #the estimated intra individual correlation (0.1308769)
-# 
-# #save dupcor_lhs
-# saveRDS(dupcor_lhs, file = here::here("Dupcor","dupcor_lhs.rds"))
+#  dupcor_lhs$consensus #the estimated intra individual correlation (0.1308769)
+# #Analyzing repeated measures data using duplicateCorrelation.
+# #The model forces the magnitude of the random effect to be the same across all genes.
+#
+#
+# #Estimate linear mixed model with a single variance component
+# vfit_lhs <- lmFit(vobj_lhs, design_lhs, block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
+# vfit_lhs <- contrasts.fit(vfit_lhs, contrasts=contr.matrix.lhs)
+#
+# #Save the model to avoid recomputing everything
+# #save vfit_lhs
+# saveRDS(vfit_lhs, file = here::here("Models","vfit_lhs.rds"))
+#
+#Load vfit_lhs
+vfit_lhs <- readRDS(here::here("Models","vfit_lhs.rds"))
 
-
-#Load dupcor_lhs
-dupcor_lhs <- readRDS(here::here("Dupcor","dupcor_lhs.rds"))
-
-#Analyzing repeated measures data using duplicateCorrelation.
-#The model forces the magnitude of the random effect to be the same across all genes.
-
-
-#Estimate linear mixed model with a single variance component
-vfit_lhs <- lmFit(vobj_lhs, design_lhs, block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
-vfit_lhs <- contrasts.fit(vfit_lhs, contrasts=contr.matrix.lhs)
 # Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
 efit_lhs <- eBayes(vfit_lhs)
 topTable(efit_lhs, n=20)
@@ -267,7 +268,7 @@ summary(decideTests(efit_lhs, adjust.method="fdr"))
 #no need to use the ebayes output for this
 
 #Positive values means the gene is more expressed
-tfit_lhs <- treat(vfit_lhs, lfc=lfc) 
+tfit_lhs <- treat(vfit_lhs, lfc=lfc_half) 
 topTreat(tfit_lhs)
 nrow(tfit_lhs)
 dt_lhs <- decideTests(tfit_lhs, adjust.method="fdr")
@@ -275,14 +276,25 @@ summary(dt_lhs)
 
 #Test for significance
 Allgenes_lhs <- as.data.frame(topTreat(tfit_lhs, n=nrow(tfit_lhs)))
-Filteredgenes_lhs <- subset(Allgenes_lhs, abs(logFC) >= lfc & round(adj.P.Val, 2) < adj.P.value)
+Filteredgenes_lhs <- subset(Allgenes_lhs, abs(logFC) >= lfc_half & round(adj.P.Val, 2) < adj.P.value)
+Upregulated_lhs <-subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC >= lfc_half)
+Downregulated_lhs <-subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC <= lfc_half)
 nrow(subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC > 0))
 nrow(subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC < 0))
 
+# Create a list to save the up and down regulated genes and the df containing all genes evaluated for GO analysis
+lhs_list <- list(All_lhs = Allgenes_lhs, Upregulated_lhs = Upregulated_lhs, Downregulated_lhs = Downregulated_lhs)
+
+# Loop through and save each data frame using `here()`
+for (name in names(lhs_list)) {
+  write.csv(lhs_list[[name]], file = here::here("GenesGO", paste0(name, ".csv")), row.names = TRUE)
+}
+
+
 #Plot the outcome
 Allgenes_lhs$Significance <- "Not Significant"
-Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC >= lfc] <- "Upregulated"
-Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC <= lfc] <- "Downregulated"
+Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC >= lfc_half] <- "Upregulated"
+Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC <= lfc_half] <- "Downregulated"
 
 #Plot DEG
 lhs_plot <- ggplot(Allgenes_lhs, aes(x = AveExpr, y = logFC, color = Significance, size = Significance)) +
@@ -291,6 +303,7 @@ lhs_plot <- ggplot(Allgenes_lhs, aes(x = AveExpr, y = logFC, color = Significanc
   scale_size_manual(values = c(1.5, 0.5, 1.5)) +
   labs(title = "Adult vs pup", x = "Mean Expression (logCPM)", y = "Log Fold Change") +
   theme_classic() +
+  ylim(-4.1,4.1) +
   theme(legend.position = "top")
 ```
 ## Colony
@@ -311,27 +324,28 @@ lhs_plot <- ggplot(Allgenes_lhs, aes(x = AveExpr, y = logFC, color = Significanc
 #
 # # Fit a random effect
 # dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n$samples$ID)
-# #dupcor_c$consensus #the estimated intra individual correlation (0.1938427)
+# dupcor_c$consensus #the estimated intra individual correlation (0.1938427)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
 # vobj_c = voom(d_n, design_c, plot=TRUE, 
 #             block=d_n$samples$ID, correlation=dupcor_c$consensus)
 # #update the correlation for the new voom weights
 # dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n$samples$ID)
-# #dupcor_c$consensus #the estimated intra individual correlation (0.1938511)
+# dupcor_c$consensus #the estimated intra individual correlation (0.1938511)
 #
-# #save dupcor_c
-# saveRDS(dupcor_c, file = here::here("Dupcor","dupcor_c.rds"))
+# #Analyzing repeated measures data using duplicateCorrelation.
+# #The model forces the magnitude of the random effect to be the same across all genes.
+# #Estimate linear mixed model with a single variance component
+#vfit_c <- lmFit(vobj_c, design_c, block=d_n$samples$ID, correlation=dupcor_c$consensus)
+#vfit_c <- contrasts.fit(vfit_c, contrasts=contr.matrix.c)
+#
+# #Save the model to avoid recomputing everything
+# #save vfit_c
+# saveRDS(vfit_c, file = here::here("Models","vfit_c.rds"))
+#
+#Load vfit_c
+vfit_c <- readRDS(here::here("Models","vfit_c.rds"))
 
-#Load dupcor_c
-dupcor_c <- readRDS(here::here("Dupcor","dupcor_c.rds"))
-
-#Analyzing repeated measures data using duplicateCorrelation.
-#The model forces the magnitude of the random effect to be the same across all genes.
-
-#Estimate linear mixed model with a single variance component
-vfit_c <- lmFit(vobj_c, design_c, block=d_n$samples$ID, correlation=dupcor_c$consensus)
-vfit_c <- contrasts.fit(vfit_c, contrasts=contr.matrix.c)
 # Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
 efit_c <- eBayes(vfit_c)
 topTable(efit_c, n=20)
@@ -372,6 +386,7 @@ c_plot <- ggplot(Allgenes_c, aes(x = AveExpr, y = logFC, color = Significance, s
   scale_size_manual(values = 0.5) +
   labs(title = "SSB vs FWB", x = "Mean Expression (logCPM)", y = "Log Fold Change") +
   theme_classic() +
+  ylim(-4.1,4.1) +
   theme(legend.position = "top")
 
 ```
@@ -393,27 +408,28 @@ c_plot <- ggplot(Allgenes_c, aes(x = AveExpr, y = logFC, color = Significance, s
 # 
 # #Fit a random effect
 # dupcor_y <- duplicateCorrelation(vobj_y, design_y, block = d_n$samples$ID)
-# #dupcor_y$consensus #the estimated intra individual correlation (0.1672733)
+# dupcor_y$consensus #the estimated intra individual correlation (0.1672733)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
 # vobj_y = voom(d_n, design_y, plot=TRUE, 
 #             block=d_n$samples$ID, correlation=dupcor_y$consensus)
 # #update the correlation for the new voom weights
 # dupcor_y <- duplicateCorrelation(vobj_y, design_y, block = d_n$samples$ID)
-# #dupcor_y$consensus #the estimated intra individual correlation (0.1672867)
-# 
-# #save dupcor_y
-# saveRDS(dupcor_y, file = here::here("Dupcor","dupcor_y.rds"))
-#Load dupcor_y
-dupcor_y <- readRDS(here::here("Dupcor","dupcor_y.rds"))
-
-
-#Analyzing repeated measures data using duplicateCorrelation.
-#The model forces the magnitude of the random effect to be the same across all genes.
-
-#Estimate linear mixed model with a single variance component
-vfit_y <- lmFit(vobj_y, design_y, block=d_n$samples$ID, correlation=dupcor_y$consensus)
-vfit_y <- contrasts.fit(vfit_y, contrasts=contr.matrix.y)
+# dupcor_y$consensus #the estimated intra individual correlation (0.1672867)
+#
+# #Analyzing repeated measures data using duplicateCorrelation.
+# #The model forces the magnitude of the random effect to be the same across all genes.
+#
+# #Estimate linear mixed model with a single variance component
+# vfit_y <- lmFit(vobj_y, design_y, block=d_n$samples$ID, correlation=dupcor_y$consensus)
+# vfit_y <- contrasts.fit(vfit_y, contrasts=contr.matrix.y)
+#
+# #Save the model to avoid recomputing everything
+# #save vfit_y
+saveRDS(vfit_y, file = here::here("Models","vfit_y.rds"))
+#
+#Load vfit_y
+vfit_y <- readRDS(here::here("Models","vfit_y.rds"))
 # Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
 efit_y <- eBayes(vfit_y)
 topTable(efit_y, n=20)
@@ -453,6 +469,7 @@ y_plot <- ggplot(Allgenes_y, aes(x = AveExpr, y = logFC, color = Significance, s
   scale_size_manual(values = 0.5) +
   labs(title = "2018-2019 vs 2019-2020", x = "Mean Expression (logCPM)", y = "Log Fold Change") +
   theme_classic() +
+  ylim(-4.1,4.1) +
   theme(legend.position = "top")
 ```
 
