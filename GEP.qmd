@@ -671,6 +671,39 @@ topTreat(tfit_interaction3, coef = "Interaction") #specific for the interaction
 nrow(tfit_interaction3)
 dt_interaction3 <- decideTests(tfit_interaction3, adjust.method="fdr")
 summary(dt_interaction3) 
+
+#Test for significance
+#Extract significant genes for each contrast
+Allgenes_EndvsStartMum <- as.data.frame(topTreat(tfit_interaction3, coef = "EndvsStartMum", n = nrow(tfit_interaction3)))
+Allgenes_EndvsStartPup <- as.data.frame(topTreat(tfit_interaction3, coef = "EndvsStartPup", n = nrow(tfit_interaction3)))
+Allgenes_Interaction3 <- as.data.frame(topTreat(tfit_interaction3, coef = "Interaction", n = nrow(tfit_interaction3)))
+#Filtered
+Filtered_EndvsStartMum <- subset(Allgenes_EndvsStartMum, abs(logFC) >= lfc_half & adj.P.Val < adj.P.value)
+Filtered_EndvsStartPup <- subset(Allgenes_EndvsStartPup, abs(logFC) >= lfc_half & adj.P.Val < adj.P.value)
+Filtered_Interaction3 <- subset(Allgenes_Interaction3, abs(logFC) >= lfc_half & adj.P.Val < adj.P.value)
+
+Upregulated_EndvsStartMum <- subset(Filtered_EndvsStartMum, logFC > 0)
+Downregulated_EndvsStartMum <- subset(Filtered_EndvsStartMum, logFC < 0)
+
+Upregulated_EndvsStartPup <- subset(Filtered_EndvsStartPup, logFC > 0)
+Downregulated_EndvsStartPup <- subset(Filtered_EndvsStartPup, logFC < 0)
+
+Upregulated_Interaction3 <- subset(Filtered_Interaction3, logFC > 0)
+Downregulated_Interaction3 <- subset(Filtered_Interaction3, logFC < 0)
+
+# Create a list to save the up and down regulated genes and the df containing all genes evaluated for GO analysis
+interaction3_list <- list(All_Interaction3 = Allgenes_Interaction3, 
+                          Upregulated_interaction3 = Upregulated_Interaction3, 
+                          Downregulated_Interaction3 = Downregulated_Interaction3, 
+                          Upregulated_EndvsStartPup = Upregulated_EndvsStartPup,
+                          Downregulated_EndvsStartPup = Downregulated_EndvsStartPup,
+                          Upregulated_EndvsStartMum = Upregulated_EndvsStartMum,
+                          Downregulated_EndvsStartMum = Downregulated_EndvsStartMum)
+
+# Loop through and save each data frame using `here()`
+for (name in names(interaction3_list)) {
+  write.csv(interaction3_list[[name]], file = here::here("GenesGO", paste0(name, ".csv")), row.names = TRUE)
+}
 ```
 ## Colony and life stage interaction
 
@@ -728,4 +761,61 @@ topTreat(tfit_interaction4, coef = "Interaction") #specific for the interaction
 nrow(tfit_interaction4)
 dt_interaction4 <- decideTests(tfit_interaction4, adjust.method="fdr")
 summary(dt_interaction4) 
+```
+
+# Gene expression and inbreeding
+```{r}
+#Load in froh data
+inbreeding <- read.csv("genetic_data.csv", header = TRUE, sep = ",")
+
+# View the first few rows
+head(inbreeding)
+
+#Bind by ID
+d_n$samples <- left_join(d_n$samples, inbreeding, by = "ID")
+#check <- subset(d_n$samples, select = c("ID", "froh.new")) #is complete
+#check that dimensions are equal
+#dim(d_n)  # Should return (genes x samples)
+#dim(design_inbreeding)  # Should return (samples x predictors)
+```
+
+### Run limma model with froh
+```{r}
+#Limma model with continuous variable fROH
+#Create a design matrix including fROH
+design_inbreeding <- model.matrix(~ froh.new, data = d_n$samples)  #Keep intercept, as we would otherwise assume that all genes have an expression of 0 at froh = 0 (https://support.bioconductor.org/p/121084/)
+
+# #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
+vobj_inbreeding <- voom(d_n, design_inbreeding, plot=TRUE)
+
+#Fit a random effect
+dupcor_inbreeding <- duplicateCorrelation(vobj_inbreeding, design_inbreeding, block = d_n$samples$ID)
+# #dupcor_inbreeding$consensus #the estimated intra individual correlation (0.196295)
+
+vobj_inbreeding = voom(d_n, design_inbreeding, plot=TRUE, 
+                        block=d_n$samples$ID, correlation=dupcor_inbreeding$consensus)
+# #update the correlation for the new voom weights
+dupcor_inbreeding <- duplicateCorrelation(vobj_inbreeding, design_inbreeding, block = d_n$samples$ID)
+# #dupcor_inbreeding$consensus #the estimated intra individual correlation (0.1962937)
+
+#Estimate linear mixed model with a single variance component
+vfit_inbreeding <- lmFit(vobj_inbreeding, design_inbreeding, block=d_n$samples$ID, correlation=dupcor_inbreeding$consensus)
+
+efit_inbreeding <- eBayes(vfit_inbreeding)
+topTable(efit_inbreeding, n=20)
+plotSA(efit_inbreeding, main="Final model: Mean-variance trend")
+plotMD(efit_inbreeding)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit_inbreeding$F
+#head(efit_inbreeding$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
+#head(efit_inbreeding$p.value) #same
+summary(decideTests(efit_inbreeding, adjust.method="fdr"))
+
+tfit_inbreeding <- treat(vfit_inbreeding, lfc=lfc_half) 
+topTreat(tfit_inbreeding)
+nrow(tfit_inbreeding)
+dt_inbreeding <- decideTests(tfit_inbreeding, adjust.method="fdr")
+summary(dt_inbreeding) #no differential expressed genes related to froh
 ```
