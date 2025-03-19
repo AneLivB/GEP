@@ -106,7 +106,7 @@ rm(counts_per_million, density_plot, df_long, df_melted, log_counts_per_million,
 # Differential gene expression analysis
 
 ```{r}
-clrs <- c("Upregulated" = "plum3", "Downregulated" = "cornflowerblue", "Not Significant" = "grey20")
+clrs <- c("Upregulated" = "lightsalmon1", "Downregulated" = "mediumpurple2", "Not Significant" = "grey20")
 lfc <- 1 #log fold change of 1 is pretty standard but explore further
 #a doubling in the original scaling is equal to a log2 fold change of 1
 #a quadrupling is equal to a log2 fold change of 2
@@ -206,11 +206,15 @@ tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(P.Value), color = Signi
   geom_point() +
   scale_color_manual(values = clrs) +  
   scale_size_manual(values = c(1.5, 0.5, 1.5)) +
-  labs(title = "Time point (End VS Start)", x = "Log2 fold change", y = "-Log10 P-value") +
+  labs(title = "(a) Time point (End VS Start)", x = "Log2 fold change", y = "-Log10 P-value") +
   theme_classic() +
   ylim(0,60) +
   xlim(-4,4) +
-  theme(legend.position = "top")
+  theme(
+    legend.position = "top",
+    plot.title.position = "plot",  
+    plot.title = element_text(margin = margin(t = 20)),
+    plot.margin = unit(c(-0.5,0.5,0.5,0.5), "cm"))
 ```
 ## Life stages
 
@@ -302,11 +306,15 @@ lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(P.Value), color = Sig
   geom_point() +
   scale_color_manual(values = clrs) +  
   scale_size_manual(values = c(1.5, 0.5, 1.5)) +
-  labs(title = "Life history stage (Adult VS Pup)", x = "Log2 fold change", y = "-Log10 P-value") +
+  labs(title = "(b) Life history stage (Adult VS Pup)", x = "Log2 fold change", y = "-Log10 P-value") +
   theme_classic() +
   #ylim(0,60) +
   #xlim(-4,4) +
-  theme(legend.position = "top")
+    theme(
+    legend.position = "top",
+    plot.title.position = "plot",  
+    plot.title = element_text(margin = margin(t = 20)),
+    plot.margin = unit(c(-0.5,0.5,0.5,0.5), "cm"))
 ```
 ## Colony
 
@@ -386,11 +394,15 @@ c_plot <- ggplot(Allgenes_c, aes(x = logFC, y = -log10(P.Value), color = Signifi
   geom_point() +
   scale_color_manual(values = clrs) +  
   scale_size_manual(values = 0.5) +
-  labs(title = "Colony (SSB VS FWB)", x = "Log2 fold change", y = "-Log10 P-value") +
+  labs(title = "(d) Colony (SSB VS FWB)", x = "Log2 fold change", y = "-Log10 P-value") +
   theme_classic() +
   ylim(0,60) +
   xlim(-4,4) +
-  theme(legend.position = "top")
+    theme(
+    legend.position = "top",
+    plot.title.position = "plot",  
+    plot.title = element_text(margin = margin(t = 20)),
+    plot.margin = unit(c(-0.5,0.5,0.5,0.5), "cm")) 
 ```
 
 ## Season
@@ -469,19 +481,37 @@ y_plot <- ggplot(Allgenes_y, aes(x = logFC, y = -log10(P.Value), color = Signifi
   geom_point() +
   scale_color_manual(values = clrs) +  
   scale_size_manual(values = 0.5) +
-  labs(title = "Season (2018-2019 VS 2019-2020)", x = "Log2 fold change", y = "-Log10 P-value") +
+  labs(title = "(c) Season (2019 VS 2020)", x = "Log2 fold change", y = "-Log10 P-value") +
   theme_classic() +
   ylim(0,60) +
   xlim(-4,4) +
-  theme(legend.position = "top")
+    theme(
+    legend.position = "top",
+    plot.title.position = "plot",  
+    plot.title = element_text(margin = margin(t = 20)),
+    plot.margin = unit(c(-0.5,0.5,0.5,0.5), "cm")) 
 ```
 
 ```{r}
 #Bind plots together
 library(cowplot)
+install.packages("ggpubr")
+library(ggpubr)
 
-DEG_all <- plot_grid(y_plot, lhs_plot, c_plot, tp_plot)
-ggsave(here::here("Plots","DEG_all.png"), plot = DEG_all, width = 12, height = 8, dpi = 600)
+# Apply theme to make similar
+y_plot <- y_plot + theme(text = element_text(family = "sans", size = 10)) +
+  theme(legend.title = element_blank())
+lhs_plot <- lhs_plot + theme(text = element_text(family = "sans", size = 10)) +
+  theme(legend.title = element_blank())
+c_plot <- c_plot + theme(text = element_text(family = "sans", size = 10)) +
+  theme(legend.title = element_blank())
+tp_plot <- tp_plot + theme(text = element_text(family = "sans", size = 10)) +
+  theme(legend.title = element_blank())
+
+# Combine plots
+DEG_all <- ggarrange(tp_plot, lhs_plot, y_plot, c_plot, common.legend = T, legend = "bottom")
+
+ggsave(here::here("Plots","DEG_all.png"), plot = DEG_all, width = 7.2, height = 5, dpi = 600)
 ```
 
 # Interactions
