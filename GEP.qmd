@@ -189,7 +189,7 @@ summary(dt)
 Allgenes_tp <- as.data.frame(topTreat(tfit, n=nrow(tfit)))
 Filteredgenes_tp <- subset(Allgenes_tp, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
 Upregulated_tp <-subset(Filteredgenes_tp, Filteredgenes_tp$logFC >= lfc)
-Downregulated_tp <-subset(Filteredgenes_tp, Filteredgenes_tp$logFC <= lfc)
+Downregulated_tp <-subset(Filteredgenes_tp, Filteredgenes_tp$logFC <= -lfc)
 nrow(subset(Filteredgenes_tp, Filteredgenes_tp$logFC > 0))
 nrow(subset(Filteredgenes_tp, Filteredgenes_tp$logFC < 0))
 
@@ -204,7 +204,7 @@ for (name in names(tp_list)) {
 #Significance
 Allgenes_tp$Significance <- "'Not significant'"
 Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC >= lfc] <- "Upregulated"
-Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC <= lfc] <- "Downregulated"
+Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC <= -lfc] <- "Downregulated"
 
 #Plot volcano plot
 tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
@@ -286,7 +286,7 @@ summary(dt_lhs)
 Allgenes_lhs <- as.data.frame(topTreat(tfit_lhs, n=nrow(tfit_lhs)))
 Filteredgenes_lhs <- subset(Allgenes_lhs, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
 Upregulated_lhs <-subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC >= lfc)
-Downregulated_lhs <-subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC <= lfc)
+Downregulated_lhs <-subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC <= -lfc)
 nrow(subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC > 0))
 nrow(subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC < 0))
 
@@ -302,7 +302,7 @@ for (name in names(lhs_list)) {
 #Significance
 Allgenes_lhs$Significance <- "'Not significant'"
 Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC >= lfc] <- "Upregulated"
-Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC <= lfc] <- "Downregulated"
+Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC <= -lfc] <- "Downregulated"
 
 #Plot DEG volcano plot
 lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
@@ -381,14 +381,14 @@ summary(dt_c)
 
 #Test for significance
 Allgenes_c <- as.data.frame(topTreat(tfit_c, n=nrow(tfit_c)))
-Filteredgenes_c <- subset(Allgenes_c, abs(logFC) >= lfc & round(adj.P.Val, 2) < adj.P.value)
+Filteredgenes_c <- subset(Allgenes_c, abs(logFC) >= lfc & adj.P.Val, 2 < adj.P.value)
 nrow(subset(Filteredgenes_c, Filteredgenes_c$logFC > 0))
 nrow(subset(Filteredgenes_c, Filteredgenes_c$logFC < 0))
 
 #Significance
 Allgenes_c$Significance <- "'Not significant'"
 Allgenes_c$Significance[Allgenes_c$adj.P.Val < adj.P.value & Allgenes_c$logFC >= lfc] <- "Upregulated"
-Allgenes_c$Significance[Allgenes_c$adj.P.Val < adj.P.value & Allgenes_c$logFC <= lfc] <- "Downregulated"
+Allgenes_c$Significance[Allgenes_c$adj.P.Val < adj.P.value & Allgenes_c$logFC <= -lfc] <- "Downregulated"
 
 #Plot DEG Volcano plot
 c_plot <- ggplot(Allgenes_c, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
@@ -466,14 +466,14 @@ summary(dt_y)
 
 #Test for significance
 Allgenes_y <- as.data.frame(topTreat(tfit_y, n=nrow(tfit_y)))
-Filteredgenes_y <- subset(Allgenes_y, abs(logFC) >= lfc & round(adj.P.Val, 2) < adj.P.value)
+Filteredgenes_y <- subset(Allgenes_y, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
 nrow(subset(Filteredgenes_y, Filteredgenes_y$logFC > 0))
 nrow(subset(Filteredgenes_y, Filteredgenes_y$logFC < 0))
 
 #Plot the outcome
 Allgenes_y$Significance <- "'Not significant'"
 Allgenes_y$Significance[Allgenes_y$adj.P.Val < adj.P.value & Allgenes_y$logFC >= lfc] <- "Upregulated"
-Allgenes_y$Significance[Allgenes_y$adj.P.Val < adj.P.value & Allgenes_y$logFC <= lfc] <- "Downregulated"
+Allgenes_y$Significance[Allgenes_y$adj.P.Val < adj.P.value & Allgenes_y$logFC <= -lfc] <- "Downregulated"
 
 #Plot DEG
 y_plot <- ggplot(Allgenes_y, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
