@@ -187,7 +187,7 @@ summary(dt)
 
 #Test for significance
 Allgenes_tp <- as.data.frame(topTreat(tfit, n=nrow(tfit)))
-Filteredgenes_tp <- subset(Allgenes_tp, abs(logFC) >= lfc & round(adj.P.Val, 2) < adj.P.value)
+Filteredgenes_tp <- subset(Allgenes_tp, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
 Upregulated_tp <-subset(Filteredgenes_tp, Filteredgenes_tp$logFC >= lfc)
 Downregulated_tp <-subset(Filteredgenes_tp, Filteredgenes_tp$logFC <= lfc)
 nrow(subset(Filteredgenes_tp, Filteredgenes_tp$logFC > 0))
@@ -284,7 +284,7 @@ summary(dt_lhs)
 
 #Test for significance
 Allgenes_lhs <- as.data.frame(topTreat(tfit_lhs, n=nrow(tfit_lhs)))
-Filteredgenes_lhs <- subset(Allgenes_lhs, abs(logFC) >= lfc & round(adj.P.Val, 2) < adj.P.value)
+Filteredgenes_lhs <- subset(Allgenes_lhs, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
 Upregulated_lhs <-subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC >= lfc)
 Downregulated_lhs <-subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC <= lfc)
 nrow(subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC > 0))
