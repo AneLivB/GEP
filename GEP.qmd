@@ -106,12 +106,17 @@ rm(counts_per_million, density_plot, df_long, df_melted, log_counts_per_million,
 # Differential gene expression analysis
 
 ```{r}
-clrs <- c("Upregulated" = "lightsalmon1", "Downregulated" = "mediumpurple2", "Not Significant" = "grey20")
+clrs <- c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5", "'Not significant'" = "grey20")
 lfc <- 1 #log fold change of 1 is pretty standard but explore further
 #a doubling in the original scaling is equal to a log2 fold change of 1
 #a quadrupling is equal to a log2 fold change of 2
 lfc_half <- 0.5
 adj.P.value <- 0.05
+fig_theme <- theme(text = element_text(family = "sans", size = 10),
+                   legend.title = element_blank(),
+                   legend.text=element_text(size=9),
+                   axis.text.x = element_text(size = 9),
+                   axis.text.y = element_text(size = 9))
 ```
 
 
@@ -174,7 +179,7 @@ summary(decideTests(efit, adjust.method="fdr"))
 #no need to use the ebayes output for this
 #lfc<-0.14 #threshold set by Bernice to differentiate between differentially expressed genes
 
-tfit <- treat(vfit_tp, lfc=lfc_half) #lfc = 1, lfc_half = 0.5
+tfit <- treat(vfit_tp, lfc=lfc) #lfc = 1, lfc_half = 0.5
 topTreat(tfit)
 nrow(tfit)
 dt <- decideTests(tfit, adjust.method="fdr")
@@ -182,9 +187,9 @@ summary(dt)
 
 #Test for significance
 Allgenes_tp <- as.data.frame(topTreat(tfit, n=nrow(tfit)))
-Filteredgenes_tp <- subset(Allgenes_tp, abs(logFC) >= lfc_half & round(adj.P.Val, 2) < adj.P.value)
-Upregulated_tp <-subset(Filteredgenes_tp, Filteredgenes_tp$logFC >= lfc_half)
-Downregulated_tp <-subset(Filteredgenes_tp, Filteredgenes_tp$logFC <= lfc_half)
+Filteredgenes_tp <- subset(Allgenes_tp, abs(logFC) >= lfc & round(adj.P.Val, 2) < adj.P.value)
+Upregulated_tp <-subset(Filteredgenes_tp, Filteredgenes_tp$logFC >= lfc)
+Downregulated_tp <-subset(Filteredgenes_tp, Filteredgenes_tp$logFC <= lfc)
 nrow(subset(Filteredgenes_tp, Filteredgenes_tp$logFC > 0))
 nrow(subset(Filteredgenes_tp, Filteredgenes_tp$logFC < 0))
 
@@ -197,24 +202,22 @@ for (name in names(tp_list)) {
 }
 
 #Significance
-Allgenes_tp$Significance <- "Not Significant"
-Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC >= lfc_half] <- "Upregulated"
-Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC <= lfc_half] <- "Downregulated"
+Allgenes_tp$Significance <- "'Not significant'"
+Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC >= lfc] <- "Upregulated"
+Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC <= lfc] <- "Downregulated"
 
 #Plot volcano plot
 tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
   geom_point() +
   scale_color_manual(values = clrs) +  
-  scale_size_manual(values = c(1.5, 0.5, 1.5)) +
-  labs(title = "(a) Time point (End VS Start)", x = "Log2 fold change", y = "-Log10 P-value") +
+  scale_size_manual(values = c(0.5, 1, 1)) +
+  labs(title = "(a) Time point", x = "Log2 fold change", y = "-Log10 P-value") +
   theme_classic() +
-  ylim(0,60) +
+  ylim(0,50) +
   xlim(-4,4) +
   theme(
     legend.position = "top",
-    plot.title.position = "plot",  
-    plot.title = element_text(margin = margin(t = 20)),
-    plot.margin = unit(c(-0.5,0.5,0.5,0.5), "cm"))
+    plot.title.position = "plot")
 ```
 ## Life stages
 
@@ -273,7 +276,7 @@ summary(decideTests(efit_lhs, adjust.method="fdr"))
 #no need to use the ebayes output for this
 
 #Positive values means the gene is more expressed
-tfit_lhs <- treat(vfit_lhs, lfc=lfc_half) 
+tfit_lhs <- treat(vfit_lhs, lfc=lfc) 
 topTreat(tfit_lhs)
 nrow(tfit_lhs)
 dt_lhs <- decideTests(tfit_lhs, adjust.method="fdr")
@@ -281,9 +284,9 @@ summary(dt_lhs)
 
 #Test for significance
 Allgenes_lhs <- as.data.frame(topTreat(tfit_lhs, n=nrow(tfit_lhs)))
-Filteredgenes_lhs <- subset(Allgenes_lhs, abs(logFC) >= lfc_half & round(adj.P.Val, 2) < adj.P.value)
-Upregulated_lhs <-subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC >= lfc_half)
-Downregulated_lhs <-subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC <= lfc_half)
+Filteredgenes_lhs <- subset(Allgenes_lhs, abs(logFC) >= lfc & round(adj.P.Val, 2) < adj.P.value)
+Upregulated_lhs <-subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC >= lfc)
+Downregulated_lhs <-subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC <= lfc)
 nrow(subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC > 0))
 nrow(subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC < 0))
 
@@ -297,24 +300,22 @@ for (name in names(lhs_list)) {
 
 
 #Significance
-Allgenes_lhs$Significance <- "Not Significant"
-Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC >= lfc_half] <- "Upregulated"
-Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC <= lfc_half] <- "Downregulated"
+Allgenes_lhs$Significance <- "'Not significant'"
+Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC >= lfc] <- "Upregulated"
+Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC <= lfc] <- "Downregulated"
 
 #Plot DEG volcano plot
 lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
   geom_point() +
   scale_color_manual(values = clrs) +  
-  scale_size_manual(values = c(1.5, 0.5, 1.5)) +
-  labs(title = "(b) Life history stage (Adult VS Pup)", x = "Log2 fold change", y = "-Log10 P-value") +
+  scale_size_manual(values = c(0.5, 1, 1)) +
+  labs(title = "(b) Life history stage", x = "Log2 fold change", y = "-Log10 P-value") +
   theme_classic() +
   #ylim(0,60) +
   #xlim(-4,4) +
     theme(
     legend.position = "top",
-    plot.title.position = "plot",  
-    plot.title = element_text(margin = margin(t = 20)),
-    plot.margin = unit(c(-0.5,0.5,0.5,0.5), "cm"))
+    plot.title.position = "plot")
 ```
 ## Colony
 
@@ -385,7 +386,7 @@ nrow(subset(Filteredgenes_c, Filteredgenes_c$logFC > 0))
 nrow(subset(Filteredgenes_c, Filteredgenes_c$logFC < 0))
 
 #Significance
-Allgenes_c$Significance <- "Not Significant"
+Allgenes_c$Significance <- "'Not significant'"
 Allgenes_c$Significance[Allgenes_c$adj.P.Val < adj.P.value & Allgenes_c$logFC >= lfc] <- "Upregulated"
 Allgenes_c$Significance[Allgenes_c$adj.P.Val < adj.P.value & Allgenes_c$logFC <= lfc] <- "Downregulated"
 
@@ -394,15 +395,13 @@ c_plot <- ggplot(Allgenes_c, aes(x = logFC, y = -log10(P.Value), color = Signifi
   geom_point() +
   scale_color_manual(values = clrs) +  
   scale_size_manual(values = 0.5) +
-  labs(title = "(d) Colony (SSB VS FWB)", x = "Log2 fold change", y = "-Log10 P-value") +
+  labs(title = "(d) Colony", x = "Log2 fold change", y = "-Log10 P-value") +
   theme_classic() +
-  ylim(0,60) +
+  ylim(0,50) +
   xlim(-4,4) +
     theme(
     legend.position = "top",
-    plot.title.position = "plot",  
-    plot.title = element_text(margin = margin(t = 20)),
-    plot.margin = unit(c(-0.5,0.5,0.5,0.5), "cm")) 
+    plot.title.position = "plot")
 ```
 
 ## Season
@@ -472,7 +471,7 @@ nrow(subset(Filteredgenes_y, Filteredgenes_y$logFC > 0))
 nrow(subset(Filteredgenes_y, Filteredgenes_y$logFC < 0))
 
 #Plot the outcome
-Allgenes_y$Significance <- "Not Significant"
+Allgenes_y$Significance <- "'Not significant'"
 Allgenes_y$Significance[Allgenes_y$adj.P.Val < adj.P.value & Allgenes_y$logFC >= lfc] <- "Upregulated"
 Allgenes_y$Significance[Allgenes_y$adj.P.Val < adj.P.value & Allgenes_y$logFC <= lfc] <- "Downregulated"
 
@@ -481,15 +480,13 @@ y_plot <- ggplot(Allgenes_y, aes(x = logFC, y = -log10(P.Value), color = Signifi
   geom_point() +
   scale_color_manual(values = clrs) +  
   scale_size_manual(values = 0.5) +
-  labs(title = "(c) Season (2019 VS 2020)", x = "Log2 fold change", y = "-Log10 P-value") +
+  labs(title = "(c) Season", x = "Log2 fold change", y = "-Log10 P-value") +
   theme_classic() +
-  ylim(0,60) +
+  ylim(0,50) +
   xlim(-4,4) +
     theme(
     legend.position = "top",
-    plot.title.position = "plot",  
-    plot.title = element_text(margin = margin(t = 20)),
-    plot.margin = unit(c(-0.5,0.5,0.5,0.5), "cm")) 
+    plot.title.position = "plot")
 ```
 
 ```{r}
@@ -499,14 +496,10 @@ install.packages("ggpubr")
 library(ggpubr)
 
 # Apply theme to make similar
-y_plot <- y_plot + theme(text = element_text(family = "sans", size = 10)) +
-  theme(legend.title = element_blank())
-lhs_plot <- lhs_plot + theme(text = element_text(family = "sans", size = 10)) +
-  theme(legend.title = element_blank())
-c_plot <- c_plot + theme(text = element_text(family = "sans", size = 10)) +
-  theme(legend.title = element_blank())
-tp_plot <- tp_plot + theme(text = element_text(family = "sans", size = 10)) +
-  theme(legend.title = element_blank())
+y_plot <- y_plot + fig_theme
+lhs_plot <- lhs_plot + fig_theme
+c_plot <- c_plot + fig_theme
+tp_plot <- tp_plot + fig_theme
 
 # Combine plots
 DEG_all <- ggarrange(tp_plot, lhs_plot, y_plot, c_plot, common.legend = T, legend = "bottom")
@@ -515,24 +508,6 @@ ggsave(here::here("Plots","DEG_all.png"), plot = DEG_all, width = 7.2, height = 
 ```
 
 # Interactions
-
-```{r}
-#just to remember this code for volcano plots
-# Create a new column to categorize genes
-PupvsAdult_Season2_results$Significance <- "Not Significant"
-PupvsAdult_Season2_results$Significance[PupvsAdult_Season2_results$adj.P.Val < 0.05 & PupvsAdult_Season2_results$logFC >= 1] <- "Upregulated"
-PupvsAdult_Season2_results$Significance[PupvsAdult_Season2_results$adj.P.Val < 0.05 & PupvsAdult_Season2_results$logFC <= -1] <- "Downregulated"
-
-# Plot volcano plot
-LS_Season2 <- ggplot(PupvsAdult_Season2_results, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
-  geom_point(alpha = 0.7) +
-  scale_color_manual(values = c("Upregulated" = "plum3", "Downregulated" = "cornflowerblue", "Not Significant" = "grey20")) +
-  scale_size_manual(values = c("Upregulated" = 1.5, "Downregulated" = 1.5, "Not Significant" = 0.5)) +
-  labs(title = "Differential Expression from PupvsAdult_Season2",
-       x = "Log2 Fold Change",
-       y = "-Log10 P-value") +
-  theme_classic()
-```
 ## Year and life history stage interaction
 ```{r}
 #Simple interaction (limma manual 9.5.2)
@@ -580,7 +555,7 @@ efit_interaction$F
 #head(efit_y$p.value) #same
 summary(decideTests(efit_interaction, adjust.method="fdr"))
 
-tfit_interaction <- treat(vfit_interaction, lfc=lfc_half) 
+tfit_interaction <- treat(vfit_interaction, lfc=lfc) 
 topTreat(tfit_interaction)
 nrow(tfit_interaction)
 dt_interaction <- decideTests(tfit_interaction, adjust.method="fdr")
@@ -634,7 +609,7 @@ efit_interaction2$F
 #head(efit_y$p.value) #same
 summary(decideTests(efit_interaction2, adjust.method="fdr"))
 
-tfit_interaction2 <- treat(vfit_interaction2, lfc=lfc_half) 
+tfit_interaction2 <- treat(vfit_interaction2, lfc=lfc) 
 topTreat(tfit_interaction2)
 nrow(tfit_interaction2)
 dt_interaction2 <- decideTests(tfit_interaction2, adjust.method="fdr")
@@ -689,7 +664,7 @@ efit_interaction3$F
 #head(efit_interaction3$p.value) #same (not the same?)
 summary(decideTests(efit_interaction3, adjust.method="fdr"))
 
-tfit_interaction3 <- treat(vfit_interaction3, lfc=lfc_half) 
+tfit_interaction3 <- treat(vfit_interaction3, lfc=lfc) 
 topTreat(tfit_interaction3)
 topTreat(tfit_interaction3, coef = "Interaction") #specific for the interaction
 nrow(tfit_interaction3)
@@ -702,9 +677,9 @@ Allgenes_EndvsStartMum <- as.data.frame(topTreat(tfit_interaction3, coef = "Endv
 Allgenes_EndvsStartPup <- as.data.frame(topTreat(tfit_interaction3, coef = "EndvsStartPup", n = nrow(tfit_interaction3)))
 Allgenes_Interaction3 <- as.data.frame(topTreat(tfit_interaction3, coef = "Interaction", n = nrow(tfit_interaction3)))
 #Filtered
-Filtered_EndvsStartMum <- subset(Allgenes_EndvsStartMum, abs(logFC) >= lfc_half & adj.P.Val < adj.P.value)
-Filtered_EndvsStartPup <- subset(Allgenes_EndvsStartPup, abs(logFC) >= lfc_half & adj.P.Val < adj.P.value)
-Filtered_Interaction3 <- subset(Allgenes_Interaction3, abs(logFC) >= lfc_half & adj.P.Val < adj.P.value)
+Filtered_EndvsStartMum <- subset(Allgenes_EndvsStartMum, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
+Filtered_EndvsStartPup <- subset(Allgenes_EndvsStartPup, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
+Filtered_Interaction3 <- subset(Allgenes_Interaction3, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
 
 Upregulated_EndvsStartMum <- subset(Filtered_EndvsStartMum, logFC > 0)
 Downregulated_EndvsStartMum <- subset(Filtered_EndvsStartMum, logFC < 0)
@@ -783,7 +758,7 @@ efit_interaction4$F
 #head(efit_interaction4$p.value) #same (not the same?)
 summary(decideTests(efit_interaction4, adjust.method="fdr"))
 
-tfit_interaction4 <- treat(vfit_interaction4, lfc=lfc_half) 
+tfit_interaction4 <- treat(vfit_interaction4, lfc=lfc) 
 topTreat(tfit_interaction4)
 topTreat(tfit_interaction4, coef = "Interaction") #specific for the interaction
 nrow(tfit_interaction4)
