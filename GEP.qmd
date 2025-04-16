@@ -42,11 +42,13 @@ here::here()
 #| label: packages
 #| echo: FALSE
 #here::here()
-invisible(pacman::p_load(dplyr, tidyverse, cowplot, edgeR, DESeq2, RColorBrewer, ggplot2, reshape2))
+invisible(pacman::p_load(dplyr, tidyverse, cowplot, edgeR, DESeq2, RColorBrewer, ggplot2, reshape2, ggpubr))
+
 #cowplot for toggling with plots
-#edgeR  loads limma as a dependency, limma for annalysing microassay and RNA seq data
+#edgeR  loads limma as a dependency, limma for analysing microassay and RNA seq data
 #DESeq2 needed for rowCounts
 #reshape2 needed for the first plot
+#ggpubr need to bind plots together
 ```
 
 # Data 
@@ -66,6 +68,103 @@ d_n$samples$pair <- as.factor(d_n$samples$pair)
 #dim(d_n) 12639 rows
 ```
 
+# PCA
+```{r}
+#Use PCA to identify outliers. F24_FWB_mum_start_2018B was already removed at an earlier state
+cpm_mat <- cpm(d_n, log=TRUE)  #we need the log values
+exprs_mat <- cpm_mat
+exprs_t <- t(exprs_mat) #transpose
+pca_result <- prcomp(exprs_t, center = TRUE, scale. = TRUE)
+
+pca_var <- pca_result$sdev^2                  
+pca_var_explained <- pca_var / sum(pca_var)   
+round(pca_var_explained[1:2] * 100, 2)
+
+pc_scores <- as.data.frame(pca_result$x[, 1:2])  #keep PC1 and PC2
+pc_scores$SampleID <- rownames(pc_scores)
+pc_scores <- cbind(pc_scores, d_n$samples[match(pc_scores$SampleID, rownames(d_n$samples)), ])
+
+PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage)) +
+  geom_point(size = 3) +
+  theme_classic() +
+  stat_ellipse(type = "norm", size = 1) +
+  xlim(-400, 150) +
+  ylim(-150, 150) +
+  labs(title = "PCA of gene expression profiles", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = "LHS")
+
+PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group)) +
+  geom_point(size = 3) +
+  theme_classic() +
+  stat_ellipse(type = "norm", size = 1) +
+  xlim(-400, 150) +
+  ylim(-150, 150) +
+  labs(title = "PCA of gene expression profiles", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = "TP")
+
+PCA_plots <- ggarrange(PCA_LHS, PCA_TP)
+
+#The PCA identifies F6_FWB_mum_start_2018B as an outlier
+
+#Remove F6_FWB_mum_start_2018B and redo the PCA plots
+d_n <- d_n[, d_n$samples$Sample != "F6_FWB_mum_start_2018B"]
+
+#Re do the PCA analysis
+cpm_mat <- cpm(d_n, log=TRUE)  #we need the log values
+exprs_mat <- cpm_mat
+exprs_t <- t(exprs_mat) #transpose
+pca_result <- prcomp(exprs_t, center = TRUE, scale. = TRUE)
+
+pca_var <- pca_result$sdev^2                  
+pca_var_explained <- pca_var / sum(pca_var)   
+round(pca_var_explained[1:2] * 100, 2)
+
+pc_scores <- as.data.frame(pca_result$x[, 1:2])  #keep PC1 and PC2
+pc_scores$SampleID <- rownames(pc_scores)
+pc_scores <- cbind(pc_scores, d_n$samples[match(pc_scores$SampleID, rownames(d_n$samples)), ])
+
+write.csv(pc_scores, file = here::here("GenesGO", "pc_scores.csv"))
+
+#Plot in accordance to LHS and TP
+PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage)) +
+  geom_point(size = 2) +
+  theme_classic() +
+  stat_ellipse(type = "norm", size = 0.5) +
+  scale_color_manual(values = c("#728C59", "#E3B778")) +
+  xlim(-200, 200) +
+  ylim(-200, 200) +
+  labs(title = "c) PCA: Life history stage", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
+
+PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group)) +
+  geom_point(size = 2) +
+  theme_classic() +
+  stat_ellipse(type = "norm", size = 0.5) +
+  scale_color_manual(values = c("#728C59", "#E3B778")) +
+  xlim(-200, 200) +
+  ylim(-200, 200) +
+  labs(title = "a) PCA: Time point", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
+
+PCA_Y <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = year)) +
+  geom_point(size = 2) +
+  theme_classic() +
+  stat_ellipse(type = "norm", size = 0.5) +
+  scale_color_manual(values = c("#728C59", "#E3B778")) +
+  xlim(-200, 200) +
+  ylim(-200, 200) +
+  labs(title = "c) PCA: Season", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
+
+PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
+  geom_point(size = 2) +
+  theme_classic() +
+  stat_ellipse(type = "norm", size = 0.5) +
+  scale_color_manual(values = c("#728C59", "#E3B778")) +
+  xlim(-200, 200) +
+  ylim(-200, 200) +
+  labs(title = "d) PCA: Colony", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
+
+PCA_plots <- ggarrange(PCA_TP, PCA_LHS, PCA_Y, PCA_C)
+
+ggsave(here::here("Plots","PCA_plots.png"), plot = PCA_plots, width = 10, height = 4, dpi = 600)
+```
+
 #Visualize data
 
 ```{r}
@@ -76,8 +175,8 @@ log_counts_per_million <- cpm(d_n, log = T)
 #Calculate mean and median value
 L <- mean(d_n$samples$lib.size) * 1e-6 #average library size in millions
 M <- median(d_n$samples$lib.size) * 1e-6 
-#c(L, M) #19.65813, 19.10705
-lcpm.cutoff <- log2(10/M + 2/L) #-0.677827
+#c(L, M) #19.72712, 19.11033
+lcpm.cutoff <- log2(10/M + 2/L) #-0.678856
 
 df_long <- data.frame(log_counts_per_million)
 df_long$Gene <- rownames(df_long)
@@ -126,26 +225,26 @@ An example analysis where Bernice assessed differential expression per gene betw
 ```{r}
 ##-------------- ANALYSIS OF TIME POINT --------------##
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
-# design <- model.matrix(~ -1 + group, data = d_n$samples) #setting up model contrasts is more straight forward in the absence of an intercept for timepoint
-# contr.matrix <- makeContrasts(
+#design <- model.matrix(~ -1 + group, data = d_n$samples) #setting up model contrasts is more straight forward in the absence of an intercept for timepoint
+#contr.matrix <- makeContrasts(
 #  end_vs_start = group2-group1,
 #  levels = colnames(design)) #create matrix for contrasts
 # # Use voom to remove variance dependency on mean, see https://bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html
 # # voom converts raw counts to log-CPM values by automatically extracting library sizes and normalisation factors from d itself. 
 # #  If filtering of lowly-expressed genes is insufficient, a drop in variance levels can be observed at the low end of the expression scale due to very small counts.
 # #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-# vobj_tp <- voom(d_n, design, plot=TRUE)
+#vobj_tp <- voom(d_n, design, plot=TRUE)
 #
 # # Fit a random effect
-# dupcor_tp <- duplicateCorrelation(vobj_tp, design, block = d_n$samples$ID)
-# dupcor_tp$consensus #the estimated intra individual correlation (0.2988794)
+#dupcor_tp <- duplicateCorrelation(vobj_tp, design, block = d_n$samples$ID)
+#dupcor_tp$consensus #the estimated intra individual correlation (0.3115568)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
-# vobj = voom(d_n, design, plot=TRUE, 
-#           block=d_n$samples$ID, correlation=dupcor_tp$consensus)
+#vobj = voom(d_n, design, plot=TRUE, 
+#            block=d_n$samples$ID, correlation=dupcor_tp$consensus)
 # #update the correlation for the new voom weights
-# dupcor_tp <- duplicateCorrelation(vobj, design, block = d_n$samples$ID)
-# dupcor_tp$consensus #the estimated intra individual correlation (0.2989905)
+#dupcor_tp <- duplicateCorrelation(vobj, design, block = d_n$samples$ID)
+#dupcor_tp$consensus #the estimated intra individual correlation (0.3114605)
 #
 # #Fit the model
 #analyzing repeated measures data using duplicateCorrelation.
@@ -153,12 +252,12 @@ An example analysis where Bernice assessed differential expression per gene betw
 # Estimate linear mixed model with a single variance component
 # Fit the model for each gene
 # But this step uses only the genome-wide average for the random effect
-# vfit_tp <- lmFit(vobj, design, block=d_n$samples$ID, correlation=dupcor_tp$consensus)
-# vfit_tp <- contrasts.fit(vfit_tp, contrasts=contr.matrix)
+#vfit_tp <- lmFit(vobj, design, block=d_n$samples$ID, correlation=dupcor_tp$consensus)
+#vfit_tp <- contrasts.fit(vfit_tp, contrasts=contr.matrix)
 #
 #Save the model to avoid recomputing everything
-# #save vfit_tp
-# saveRDS(vfit_tp, file = here::here("Models","vfit_tp.rds"))
+#save vfit_tp
+#saveRDS(vfit_tp, file = here::here("Models","vfit_tp.rds"))
 #
 #Load vfit_tp
 vfit_tp <- readRDS(here::here("Models","vfit_tp.rds"))
@@ -219,43 +318,80 @@ tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(P.Value), color = Signi
     legend.position = "top",
     plot.title.position = "plot")
 ```
+### Heatmap
+```{r}
+#Create heatmap for differentially expressed genes between time points
+DEG_tp <- rownames(Filteredgenes_tp)
+
+#Extract the expression values for the differentially expressed genes
+expression_tp <- vobj$E[DEG_tp, ]
+
+#get labels
+annotation <- data.frame(TP = as.factor(d_n$samples$group))
+rownames(annotation) <- d_n$samples$Sample
+annotation$TP <- factor(annotation$TP, levels = c("1", "2"))
+
+#order the expression values
+matrix_tp <- expression_tp[, order(annotation$TP)]
+annotation_tp <- annotation[order(annotation$TP), , drop = FALSE]
+
+install.packages("pheatmap")  # only if you haven’t yet
+library(pheatmap)
+
+heatmap_tp <- pheatmap(matrix_tp,
+                       scale = "row",  # normalize rows (genes)
+                       color = colorRampPalette(c("#9D00FF", "white", "#FFA500"))(100),
+                       annotation_colors = ann_colors,
+                       cluster_rows = TRUE,
+                       treeheight_row = 0, 
+                       cluster_cols = FALSE,
+                       gaps_col = cumsum(table(annotation$TP)),
+                       show_rownames = TRUE,
+                       show_colnames = FALSE,
+                       annotation_legend = FALSE,
+                       fontsize_col = 8,
+                       fontsize_row = 7, 
+                       main = "Time point")
+
+ggsave(here::here("Plots","heatmap_tp.png"), plot = heatmap_tp, width = 3.5, height = 7, dpi = 600)
+```
+
 ## Life stages
 
 ```{r}
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 # #Create a design matrix
-# design_lhs <- model.matrix(~ -1 + life_history_stage, data = d_n$samples) #model contrasts without intercept is easier
-# colnames(design_lhs) <- gsub("life_history_stage", "", colnames(design_lhs)) #clean group names
+#design_lhs <- model.matrix(~ -1 + life_history_stage, data = d_n$samples) #model contrasts without intercept is easier
+#colnames(design_lhs) <- gsub("life_history_stage", "", colnames(design_lhs)) #clean group names
 #
 # #create matrix for contrasts
-# contr.matrix.lhs <- makeContrasts(
-#   adultvspup = Mother-Pup,
-#   levels = colnames(design_lhs)) 
+#contr.matrix.lhs <- makeContrasts(
+#  adultvspup = Mother-Pup,
+#  levels = colnames(design_lhs)) 
 #
 # #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-# vobj_lhs <- voom(d_n, design_lhs, plot=TRUE)
+#vobj_lhs <- voom(d_n, design_lhs, plot=TRUE)
 # 
 # # Fit a random effect
-# dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
-# dupcor_lhs$consensus #the estimated intra individual correlation (0.13086)
-# #the intra individual correlation will change the voom weights slightly
-# #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
-# vobj_lhs = voom(d_n, design_lhs, plot=TRUE, 
-#           block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
+#dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
+#dupcor_lhs$consensus #the estimated intra individual correlation (0.1362346)
+#
+#vobj_lhs = voom(d_n, design_lhs, plot=TRUE, 
+#          block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
 # #update the correlation for the new voom weights
-# dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
-#  dupcor_lhs$consensus #the estimated intra individual correlation (0.1308769)
+#dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
+#dupcor_lhs$consensus #the estimated intra individual correlation (0.1362741)
 # #Analyzing repeated measures data using duplicateCorrelation.
 # #The model forces the magnitude of the random effect to be the same across all genes.
 #
 #
 # #Estimate linear mixed model with a single variance component
-# vfit_lhs <- lmFit(vobj_lhs, design_lhs, block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
-# vfit_lhs <- contrasts.fit(vfit_lhs, contrasts=contr.matrix.lhs)
+#vfit_lhs <- lmFit(vobj_lhs, design_lhs, block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
+#vfit_lhs <- contrasts.fit(vfit_lhs, contrasts=contr.matrix.lhs)
 #
 # #Save the model to avoid recomputing everything
 # #save vfit_lhs
-# saveRDS(vfit_lhs, file = here::here("Models","vfit_lhs.rds"))
+#saveRDS(vfit_lhs, file = here::here("Models","vfit_lhs.rds"))
 #
 #Load vfit_lhs
 vfit_lhs <- readRDS(here::here("Models","vfit_lhs.rds"))
@@ -317,32 +453,67 @@ lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(P.Value), color = Sig
     legend.position = "top",
     plot.title.position = "plot")
 ```
+### Heatmap
+```{r}
+#Create heatmap for differentially expressed genes between time points
+DEG_lhs <- rownames(Filteredgenes_lhs)
+
+#Extract the expression values for the differentially expressed genes
+expression_lhs <- vobj_lhs$E[DEG_lhs, ]
+
+#get labels
+annotation <- data.frame(LHS = as.factor(d_n$samples$life_history_stage))
+rownames(annotation) <- d_n$samples$Sample
+annotation$LHS <- factor(annotation$LHS, levels = c("Mother", "Pup"))
+
+#order the expression values
+matrix_lhs <- expression_lhs[, order(annotation$LHS)]
+annotation_lhs <- annotation[order(annotation$LHS), , drop = FALSE]
+
+heatmap_lhs <- pheatmap(matrix_lhs,
+                       scale = "row",  # normalize rows (genes)
+                       color = colorRampPalette(c("#9D00FF", "white", "#FFA500"))(100),
+                       annotation_colors = ann_colors,
+                       cluster_rows = TRUE,
+                       treeheight_row = 0, 
+                       cluster_cols = FALSE,
+                       gaps_col = cumsum(table(annotation$LHS)),
+                       show_rownames = TRUE,
+                       show_colnames = F,
+                       annotation_legend = FALSE,
+                       fontsize_col = 8,
+                       fontsize_row = 7, 
+                       main = "Life history stage")
+
+ggsave(here::here("Plots","heatmap_lhs.png"), plot = heatmap_lhs, width = 8, height = 12, dpi = 600)
+```
+
 ## Colony
 
 ```{r}
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 # #Create a design matrix
-# design_c <- model.matrix(~ -1 + colony, data = d_n$samples) #model contrasts without intercept is easier
-# colnames(design_c) <- gsub("colony", "", colnames(design_c)) #clean group names
+#design_c <- model.matrix(~ -1 + colony, data = d_n$samples) #model contrasts without intercept is easier
+#colnames(design_c) <- gsub("colony", "", colnames(design_c)) #clean group names
 #
 # #create matrix for contrasts
-# contr.matrix.c <- makeContrasts(
-#   SSBvsFWB = SSB-FWB,
-#   levels = colnames(design_c)) 
+#contr.matrix.c <- makeContrasts(
+#  SSBvsFWB = SSB-FWB,
+#  levels = colnames(design_c)) 
 #
 # #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-# vobj_c <- voom(d_n, design_c, plot=TRUE)
+#vobj_c <- voom(d_n, design_c, plot=TRUE)
 #
 # # Fit a random effect
-# dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n$samples$ID)
-# dupcor_c$consensus #the estimated intra individual correlation (0.1938427)
+#dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n$samples$ID)
+#dupcor_c$consensus #the estimated intra individual correlation (0.1998915)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
-# vobj_c = voom(d_n, design_c, plot=TRUE, 
-#             block=d_n$samples$ID, correlation=dupcor_c$consensus)
+#vobj_c = voom(d_n, design_c, plot=TRUE, 
+#            block=d_n$samples$ID, correlation=dupcor_c$consensus)
 # #update the correlation for the new voom weights
-# dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n$samples$ID)
-# dupcor_c$consensus #the estimated intra individual correlation (0.1938511)
+#dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n$samples$ID)
+#dupcor_c$consensus #the estimated intra individual correlation (0.1999114)
 #
 # #Analyzing repeated measures data using duplicateCorrelation.
 # #The model forces the magnitude of the random effect to be the same across all genes.
@@ -352,7 +523,7 @@ lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(P.Value), color = Sig
 #
 # #Save the model to avoid recomputing everything
 # #save vfit_c
-# saveRDS(vfit_c, file = here::here("Models","vfit_c.rds"))
+#saveRDS(vfit_c, file = here::here("Models","vfit_c.rds"))
 #
 #Load vfit_c
 vfit_c <- readRDS(here::here("Models","vfit_c.rds"))
@@ -421,14 +592,14 @@ c_plot <- ggplot(Allgenes_c, aes(x = logFC, y = -log10(P.Value), color = Signifi
 # 
 # #Fit a random effect
 # dupcor_y <- duplicateCorrelation(vobj_y, design_y, block = d_n$samples$ID)
-# dupcor_y$consensus #the estimated intra individual correlation (0.1672733)
+# dupcor_y$consensus #the estimated intra individual correlation (0.1744074)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
 # vobj_y = voom(d_n, design_y, plot=TRUE, 
 #             block=d_n$samples$ID, correlation=dupcor_y$consensus)
 # #update the correlation for the new voom weights
 # dupcor_y <- duplicateCorrelation(vobj_y, design_y, block = d_n$samples$ID)
-# dupcor_y$consensus #the estimated intra individual correlation (0.1672867)
+# dupcor_y$consensus #the estimated intra individual correlation (0.1744428)
 #
 # #Analyzing repeated measures data using duplicateCorrelation.
 # #The model forces the magnitude of the random effect to be the same across all genes.
@@ -438,12 +609,11 @@ c_plot <- ggplot(Allgenes_c, aes(x = logFC, y = -log10(P.Value), color = Signifi
 # vfit_y <- contrasts.fit(vfit_y, contrasts=contr.matrix.y)
 #
 # #Save the model to avoid recomputing everything
-# #save vfit_y
-saveRDS(vfit_y, file = here::here("Models","vfit_y.rds"))
+# saveRDS(vfit_y, file = here::here("Models","vfit_y.rds"))
 #
 #Load vfit_y
 vfit_y <- readRDS(here::here("Models","vfit_y.rds"))
-# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
+#ebayes model
 efit_y <- eBayes(vfit_y)
 topTable(efit_y, n=20)
 plotSA(efit_y, main="Final model: Mean-variance trend")
@@ -455,9 +625,7 @@ efit_y$F
 #head(efit_y$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
 #head(efit_y$p.value) #same
 summary(decideTests(efit_y, adjust.method="fdr"))
-#set log-fold-changes (log-FCs) to be above a minimum value. The treat method (McCarthy and Smyth 2009) used to calculate p-values from empirical Bayes moderated t-statistics with a minimum log-FC requirement. 
-#no need to use the ebayes output for this
-
+#set lfc 
 tfit_y <- treat(vfit_y, lfc=lfc) 
 topTreat(tfit_y)
 nrow(tfit_y)
@@ -491,10 +659,6 @@ y_plot <- ggplot(Allgenes_y, aes(x = logFC, y = -log10(P.Value), color = Signifi
 
 ```{r}
 #Bind plots together
-library(cowplot)
-install.packages("ggpubr")
-library(ggpubr)
-
 # Apply theme to make similar
 y_plot <- y_plot + fig_theme
 lhs_plot <- lhs_plot + fig_theme
@@ -631,13 +795,13 @@ vobj_interaction3 <- voom(d_n, design_interaction3, plot=TRUE)
 
 #Fit a random effect
 dupcor_interaction3 <- duplicateCorrelation(vobj_interaction3, design_interaction3, block = d_n$samples$ID)
-# #dupcor_interaction3$consensus #the estimated intra individual correlation (0.2608585)
+dupcor_interaction3$consensus #the estimated intra individual correlation (0.2608585)
 
 vobj_interaction3 = voom(d_n, design_interaction3, plot=TRUE, 
                         block=d_n$samples$ID, correlation=dupcor_interaction3$consensus)
 # #update the correlation for the new voom weights
 dupcor_interaction3 <- duplicateCorrelation(vobj_interaction3, design_interaction3, block = d_n$samples$ID)
-# #dupcor_interaction3$consensus #the estimated intra individual correlation (0.2909559)
+dupcor_interaction3$consensus #the estimated intra individual correlation (0.2909559)
 
 #Estimate linear mixed model with a single variance component
 vfit_interaction3 <- lmFit(vobj_interaction3, design_interaction3, block=d_n$samples$ID, correlation=dupcor_interaction3$consensus)
