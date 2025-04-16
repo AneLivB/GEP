@@ -162,7 +162,7 @@ PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
 
 PCA_plots <- ggarrange(PCA_TP, PCA_LHS, PCA_Y, PCA_C)
 
-ggsave(here::here("Plots","PCA_plots.png"), plot = PCA_plots, width = 10, height = 4, dpi = 600)
+ggsave(here::here("Plots","PCA_plots.png"), plot = PCA_plots, width = 7.2, height = 5, dpi = 600)
 ```
 
 #Visualize data
@@ -349,11 +349,11 @@ heatmap_tp <- pheatmap(matrix_tp,
                        show_rownames = TRUE,
                        show_colnames = FALSE,
                        annotation_legend = FALSE,
-                       fontsize_col = 8,
-                       fontsize_row = 7, 
+                       fontsize_col = 7,
+                       fontsize_row = 6, 
                        main = "Time point")
 
-ggsave(here::here("Plots","heatmap_tp.png"), plot = heatmap_tp, width = 3.5, height = 7, dpi = 600)
+ggsave(here::here("Plots","heatmap_tp.png"), plot = heatmap_tp, width = 3, height = 7, dpi = 600)
 ```
 
 ## Life stages
@@ -481,11 +481,12 @@ heatmap_lhs <- pheatmap(matrix_lhs,
                        show_rownames = TRUE,
                        show_colnames = F,
                        annotation_legend = FALSE,
-                       fontsize_col = 8,
-                       fontsize_row = 7, 
+                       legend = F, 
+                       fontsize_col = 7,
+                       fontsize_row = 6, 
                        main = "Life history stage")
 
-ggsave(here::here("Plots","heatmap_lhs.png"), plot = heatmap_lhs, width = 8, height = 12, dpi = 600)
+ggsave(here::here("Plots","heatmap_lhs.png"), plot = heatmap_lhs, width = 7, height = 11, dpi = 600)
 ```
 
 ## Colony
