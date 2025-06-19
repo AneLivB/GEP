@@ -32,8 +32,8 @@ mainfont: Times New Roman
 ---
 
 ```{r}
-install.packages("here")
-install.packages("pacman")
+#install.packages("here")
+#install.packages("pacman")
 library(here)
 here::here()
 ```
@@ -42,7 +42,7 @@ here::here()
 #| label: packages
 #| echo: FALSE
 #here::here()
-invisible(pacman::p_load(dplyr, tidyverse, cowplot, edgeR, DESeq2, RColorBrewer, ggplot2, reshape2, ggpubr))
+invisible(pacman::p_load(dplyr, readxl, tidyverse, cowplot, edgeR, DESeq2, RColorBrewer, ggplot2, reshape2, ggpubr))
 
 #cowplot for toggling with plots
 #edgeR  loads limma as a dependency, limma for analysing microassay and RNA seq data
@@ -51,7 +51,7 @@ invisible(pacman::p_load(dplyr, tidyverse, cowplot, edgeR, DESeq2, RColorBrewer,
 #ggpubr need to bind plots together
 ```
 
-# Data 
+# Data
 
 ```{r}
 #| label: load_data
@@ -69,6 +69,9 @@ d_n$samples$pair <- as.factor(d_n$samples$pair)
 ```
 
 # PCA
+
+Create a PCA plot to identify outliers.
+
 ```{r}
 #Use PCA to identify outliers. F24_FWB_mum_start_2018B was already removed at an earlier state
 cpm_mat <- cpm(d_n, log=TRUE)  #we need the log values
@@ -174,7 +177,11 @@ PCA_plots <- ggarrange(PCA_TP, PCA_LHS, PCA_Y, PCA_C)
 ggsave(here::here("Plots","PCA_plots.png"), plot = PCA_plots, width = 7.2, height = 5, dpi = 600)
 ```
 
-#Visualize data
+The PCA identified one outlier, which was removed from the dataset for further analysis.
+
+![Principle component analysis of raw data](Plots/PCA_plots.png)
+
+# Visualize data
 
 ```{r}
 #| label: visualize_data
@@ -203,7 +210,7 @@ density_plot <- ggplot(df_melted, aes(x = LogCPM, color = Sample)) +
   theme(legend.position = "none") +
   ylim(0,0.20)
 
-density_plot
+#density_plot
 
 # Save the density plot as a PNG file
 ggsave(here::here("Plots","density_plot.png"), plot = density_plot, width = 12, height = 8, dpi = 600)
@@ -211,6 +218,9 @@ ggsave(here::here("Plots","density_plot.png"), plot = density_plot, width = 12, 
 #Remove elements not used in the rest of the script
 rm(counts_per_million, density_plot, df_long, df_melted, log_counts_per_million, L, M, lcpm.cutoff, palette_200)
 ```
+
+![Gene count density plot](Plots/density_plot.png)
+
 # Differential gene expression analysis
 
 ```{r}
@@ -227,8 +237,8 @@ fig_theme <- theme(text = element_text(family = "sans", size = 10),
                    axis.text.y = element_text(size = 9))
 ```
 
-
 ## Time point: Analysis by Bernice
+
 An example analysis where Bernice assessed differential expression per gene between the two time points (start vs end).
 
 ```{r}
@@ -327,7 +337,9 @@ tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(P.Value), color = Signi
     legend.position = "top",
     plot.title.position = "plot")
 ```
+
 ### Heatmap
+
 ```{r}
 #Create heatmap for differentially expressed genes between time points
 DEG_tp <- rownames(Filteredgenes_tp)
@@ -364,6 +376,8 @@ heatmap_tp <- pheatmap(matrix_tp,
 
 ggsave(here::here("Plots","heatmap_tp.png"), plot = heatmap_tp, width = 3, height = 7, dpi = 600)
 ```
+
+![Heatmap: Time point](Plots/heatmap_tp.png)
 
 ## Life stages
 
@@ -462,7 +476,9 @@ lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(P.Value), color = Sig
     legend.position = "top",
     plot.title.position = "plot")
 ```
+
 ### Heatmap
+
 ```{r}
 #Create heatmap for differentially expressed genes between time points
 DEG_lhs <- rownames(Filteredgenes_lhs)
@@ -497,6 +513,8 @@ heatmap_lhs <- pheatmap(matrix_lhs,
 
 ggsave(here::here("Plots","heatmap_lhs.png"), plot = heatmap_lhs, width = 7, height = 11, dpi = 600)
 ```
+
+![Heatmap: Life history stage](Plots/heatmap_lhs.png)
 
 ## Colony
 
@@ -681,8 +699,12 @@ DEG_all <- ggarrange(tp_plot, lhs_plot, y_plot, c_plot, common.legend = T, legen
 ggsave(here::here("Plots","DEG_all.png"), plot = DEG_all, width = 7.2, height = 5, dpi = 600)
 ```
 
+![Differential gene expression analysis](Plots/DEG_all.png)
+
 # Interactions
+
 ## Year and life history stage interaction
+
 ```{r}
 #Simple interaction (limma manual 9.5.2)
 #Create a design matrix including life history stage and its interaction with year
@@ -735,6 +757,7 @@ nrow(tfit_interaction)
 dt_interaction <- decideTests(tfit_interaction, adjust.method="fdr")
 summary(dt_interaction) 
 ```
+
 ## Year and colony interaction
 
 ```{r}
@@ -884,6 +907,7 @@ for (name in names(interaction3_list)) {
 #Allgenes_EndvsStartPup[Names,]
 #Allgenes_Interaction3[Names,]
 ```
+
 ## Colony and life stage interaction
 
 ```{r}
@@ -953,198 +977,220 @@ BiocManager::install("clusterProfiler")
 invisible(pacman::p_load(dplyr, clusterProfiler, org.Hs.eg.db, enrichplot, ggplot2, VennDiagram, ggrepel))
 ```
 
-## Time point
+## Call in DEG
 
 ```{r}
-#Call up or down regulated genes from DEG in TP and LHS
-#t& transform genesymbols to upper case
-Up_TP <- read.csv("GenesGO/Upregulated_tp.csv") %>%
-  mutate(X = toupper(X))
-colnames(Up_TP)[1] <- "GeneSymbol"
-Down_TP <- read.csv("GenesGO/Downregulated_tp.csv") %>%
-  mutate(X = toupper(X))
-colnames(Down_TP)[1] <- "GeneSymbol"
-TP <- rbind(Up_TP, Down_TP)
+#Call up or down regulated genes from differential expression analysis
+file_paths <- list.files(path = "GenesGO", pattern = "^(Upregulated|Downregulated).*\\.csv$", full.names = TRUE)
 
-#background list
+# Loop through and create data frames
+for (file in file_paths) {
+  name <- tools::file_path_sans_ext(basename(file))      
+  df <- read.csv(file) %>%
+    mutate(X = toupper(X))
+  colnames(df)[1] <- "GeneSymbol"
+  assign(name, df, envir = .GlobalEnv)
+}
+
 Background <- read.csv("GenesGO/All_tp.csv") %>%
   mutate(X = toupper(X))
-Background <- Background[1]
-colnames(Background) <- "GeneSymbol"
-
+colnames(Background)[1] <- "GeneSymbol"
+rm(df, file, file_paths, name)
 ```
 
+## Gene ontology: enrichment analysis
 ```{r}
 #Go enrichment analysis for up and down regulated genes
-#Go enrichment analysis
-GOterms_TP_UP <- enrichGO(gene = Up_TP$GeneSymbol, OrgDb = org.Hs.eg.db, universe = Background$GeneSymbol, keyType = "SYMBOL", ont = "BP", pvalueCutoff = 0.05, pAdjustMethod = "BH")
+DEG_list <- list(I_TP_MUM_DOWN = Downregulated_EndvsStartMum,
+                 I_TP_PUP_DOWN = Downregulated_EndvsStartPup, 
+                 I_I_DOWN = Downregulated_Interaction3,
+                 LHS_DOWN = Downregulated_lhs,
+                 TP_DOWN = Downregulated_tp,
+                 I_TP_MUM_UP = Upregulated_EndvsStartMum,
+                 I_TP_PUP_UP = Upregulated_EndvsStartPup,
+                 I_I_UP = Upregulated_interaction3,
+                 LHS_UP = Upregulated_lhs,
+                 TP_UP = Upregulated_tp)
 
-#simplify/group gene list as maybe revigo?
+GO_results_list <- lapply(DEG_list, function(df) {
+  enrichGO(
+    gene = df$GeneSymbol,
+    OrgDb = org.Hs.eg.db,
+    universe = Background$GeneSymbol,
+    keyType = "SYMBOL",
+    ont = "BP",
+    pvalueCutoff = 0.05,
+    pAdjustMethod = "BH"
+  )
+})
 
-GOterms_TP_UP_grouped<- simplify(
-  GOterms_TP_UP,
-  cutoff = 0.5,              # Similarity threshold (lower = stricter)
-  by = "p.adjust",           # Keep the more significant term
-  select_fun = min,          # Function to select representative term
-  measure = "Wang"           # Semantic similarity measure
-)
-
-GOterms_TP_UP <- as.data.frame(GOterms_TP_UP)
-GOterms_TP_UP$DEG <- "Upregulated"
-
-
-
-GOterms_TP_Down <- enrichGO(gene = Down_TP$GeneSymbol, OrgDb = org.Hs.eg.db, universe = Background$GeneSymbol, keyType = "SYMBOL", ont = "BP", pvalueCutoff = 0.05, pAdjustMethod = "BH")
-
-#simplify/group gene list as maybe revigo?
-
-GOterms_TP_Down_grouped<- simplify(
-  GOterms_TP_Down,
-  cutoff = 0.5,              # Similarity threshold (lower = stricter)
-  by = "p.adjust",           # Keep the more significant term
-  select_fun = min,          # Function to select representative term
-  measure = "Wang"           # Semantic similarity measure
-)
-
-GOterms_TP_Down <- as.data.frame(GOterms_TP_Down)
-GOterms_TP_Down$DEG <- "Downregulated"
-
-GOterms_TP <- rbind(GOterms_TP_UP, GOterms_TP_Down)
+# #simplify/group gene list as maybe revigo?
+#
+#GOterms_TP_UP_grouped<- simplify(
+#  GOterms_TP_UP,
+#  cutoff = 0.5,              # Similarity threshold (lower = stricter)
+#  by = "p.adjust",           # Keep the more significant term
+#  select_fun = min,          # Function to select representative term
+#  measure = "Wang"           # Semantic similarity measure
+#)
 ```
 
-### VennDiagram
+## Top 20 enriched GOterms (biological process) 
+### Time point
 ```{r}
-myCol <- c("#9D00FF", "#FFA500")
+GO_TP_DOWN <- as.data.frame(GO_results_list$TP_DOWN) %>%
+  mutate(Regulation = "Downregulated") 
+GO_TP_UP <- as.data.frame(GO_results_list$TP_UP) %>%
+  mutate(Regulation = "Upregulated")
 
-grid.newpage()  # Clears the plot area
+#Combine
+GO_TP <- rbind(GO_TP_DOWN, GO_TP_UP) %>%
+  arrange(p.adjust) 
 
-draw.pairwise.venn(
-  area1 = length(GOterms_TP_UP$ID),
-  area2 = length(GOterms_TP_Down$ID),
-  cross.area = length(intersect(GOterms_TP_UP$ID, GOterms_TP_Down$ID)),
-  category = c("Upregulated", "Downregulated"),
-  cex = 1,
-  cat.cex = 1.2,
-  height = 480, 
-  width = 480, 
-  
-  #Circles
-  lwd = 2,
-  lty = 'blank',
-  col= myCol,
-  fill = c(alpha("#9D00FF",0.3), alpha('#FFA500',0.3)),
-  
-  # Numbers
- #fontface = "bold",
-  fontfamily = "sans",
- 
-  cat.pos = c(-20, 20),      
-  cat.dist = c(0.03, 0.03),  
-  cat.default.pos = "text")
-```
-
-
-
-```{r}
-#Go enrichment analysis
-
-top20_labels <- GOterms_TP %>%
+#Identify top20
+GO_TP_Top20 <- GO_TP %>%
   arrange(p.adjust) %>%
-  slice_head(n = 20)
-
-#Bubble plot fancy
-
-ggplot(GOterms_TP, aes(x = zScore, y = -log10(p.adjust))) +
-  geom_point(aes(size = Count, fill = Description), shape = 24, color = "black", alpha = 0.7) +
-  scale_size_continuous(name = "DEG Count") +
-  labs(
-    title = "Significantly Enriched GO Terms for DEGs",
-    x = "Z-score",
-    y = expression(-log[10]("Adjusted p-value (FDR)"))
-  ) +
-  theme_classic() +
-  theme(legend.position = "right") +
-  guides(fill = "none") 
-
+  slice_head(n = 20) 
 
 #Fancy smancy bubble plot
-ggplot(GOterms_TP, aes(x = zScore, y = -log10(p.adjust))) +
-  geom_point(aes(size = Count, shape = DEG, fill = Description), color = "black", alpha = 0.7) +
-  
-  scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  # circle & triangle
+plot_TP <- ggplot(GO_TP, aes(x = zScore, y = -log10(p.adjust))) +
+  geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.7) +
+
+  scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  
+  scale_fill_manual(values = c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5")) +
   scale_size_continuous(name = "DEG Count") +
-  
-geom_text_repel(
-  data = top20_labels,  # your top terms
+  #Add the top terms to the plot
+  geom_text_repel(
+  data = GO_TP_Top20,  
   aes(label = ID),
-  nudge_y = 0.1,         # nudges label upward
+  nudge_y = 0.01,         #moves label up
   size = 3,
-  segment.color = NA,    #remove line
+  segment.color = NA,    #remove line to point
   max.overlaps = Inf
 ) +
   
   labs(
-    title = "Significantly Enriched GO Terms for DEGs",
+    title = "Enrichment analysis (Time point)",
     x = "Z-score",
     y = expression(-log[10]("Adjusted p-value (FDR)")),
     shape = "Regulation"
   ) +
   
   theme_classic() +
-  theme(legend.position = "right") +
+  theme(legend.position = "right",
+        legend.title = element_text(size = 10),   
+        legend.text = element_text(size = 8),     
+        legend.key.size = unit(0.4, "cm")) +
   guides(
   size = guide_legend(
     override.aes = list(shape = 24)  # use triangle in size legend
   ),
   fill = "none" 
 )
-```
 
+#Top 20 GO terms and description
+GO_TP_Top20_table <- GO_TP_Top20[, c("ID", "Description")]
+colnames(GO_TP_Top20_table) <- c("GO Term", "Description")
+#Force line break
+GO_TP_Top20_table$Description <- str_wrap(GO_TP_Top20_table$Description, width = 45)
 
-```{r}
-#Go enrichment analysis
-GO_results_LHS <- enrichGO(gene = LHS$GeneSymbol, OrgDb = org.Hs.eg.db, universe = Background$GeneSymbol, keyType = "SYMBOL", ont = "BP", pvalueCutoff = 0.05, pAdjustMethod = "BH")
+# Create a table graphic
+p_table <- ggtexttable(GO_TP_Top20_table, 
+                       cols = colnames(GO_TP_Top20_table),
+                       rows = NULL, theme = ttheme("light"))
 
-as.data.frame(GO_results_LHS)
-#Bubble plot
-dotplot(GO_results_LHS, showCategory = 20) +
-  ggtitle("Top Enriched GO Biological Processes")
-
-barplot(GO_results_LHS, showCategory = 20) +
-  ggtitle("Top Enriched GO Biological Processes")
-
-go_df_lhs <- as.data.frame(GO_results_LHS)
-
-ggplot(go_df_lhs, aes(x = zScore, y = -log10(p.adjust))) +
-  geom_point(aes(size = Count, fill = Description), shape = 21, color = "black", alpha = 0.7) +
-  scale_size_continuous(name = "DEG Count") +
-  labs(
-    title = "Significantly Enriched GO Terms for DEGs",
-    x = "Z-score",
-    y = expression(-log[10]("Adjusted p-value (FDR)"))
-  ) +
-  theme_classic() +
-  theme(legend.position = "right") +
-  guides(fill = "none") 
-
-#simplify/group gene list as maybe revigo?
-
-go_df_lhs_grouped <- simplify(
-  GO_results_LHS,
-  cutoff = 0.5,              # Similarity threshold (lower = stricter)
-  by = "p.adjust",           # Keep the more significant term
-  select_fun = min,          # Function to select representative term
-  measure = "Wang"           # Semantic similarity measure
+EA_TP <- plot_grid(
+ plot_TP,
+ NULL,
+ p_table,
+ ncol = 3,
+ rel_widths = c(1.2,0.02,0.9)
 )
 
-go_df_lhs_grouped <- as.data.frame(go_df_lhs_grouped)
+ggsave(here::here("Plots","EA_TP.png"), plot = EA_TP, width = 12, height = 7.5, dpi = 600)
+```
 
-ggplot(go_df_lhs_grouped , aes(x = zScore, y = -log10(p.adjust))) +
-  geom_point(aes(size = Count, fill = Description), shape = 21, color = "black", alpha = 0.7) +
-  geom_text(aes(label = Description), size = 3, vjust = -1) +
+#Life history stage
+```{r}
+GO_LHS_DOWN <- as.data.frame(GO_results_list$LHS_DOWN) %>%
+  mutate(Regulation = "Downregulated") 
+GO_LHS_UP <- as.data.frame(GO_results_list$LHS_UP) %>%
+  mutate(Regulation = "Upregulated")
+
+#Combine
+GO_LHS <- rbind(GO_LHS_DOWN, GO_LHS_UP) %>%
+  arrange(p.adjust) 
+
+#Identify top20
+GO_LHS_Top20 <- GO_LHS %>%
+  arrange(p.adjust) %>%
+  slice_head(n = 20) 
+
+#Fancy smancy bubble plot
+plot_LHS <- ggplot(GO_LHS, aes(x = zScore, y = -log10(p.adjust))) +
+  geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.7) +
+
+  scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  
+  scale_fill_manual(values = c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5")) +
+  scale_size_continuous(name = "DEG Count") +
+  #Add the top terms to the plot
+  geom_text_repel(
+  data = GO_LHS_Top20,  
+  aes(label = ID),
+  nudge_y = 0.01,         #moves label up
+  size = 3,
+  segment.color = NA,    #remove line to point
+  max.overlaps = Inf
+) +
+  
+  labs(
+    title = "Enrichment analysis (Time point)",
+    x = "Z-score",
+    y = expression(-log[10]("Adjusted p-value (FDR)")),
+    shape = "Regulation"
+  ) +
+  
+  theme_classic() +
+  theme(legend.position = "right",
+        legend.title = element_text(size = 10),   
+        legend.text = element_text(size = 8),     
+        legend.key.size = unit(0.4, "cm")) +
+  guides(
+  size = guide_legend(
+    override.aes = list(shape = 24)  # use triangle in size legend
+  ),
+  fill = "none" 
+)
+
+#Top 20 GO terms and description
+GO_LHS_Top20_table <- GO_LHS_Top20[, c("ID", "Description")]
+colnames(GO_LHS_Top20_table) <- c("GO Term", "Description")
+#Force line break
+GO_LHS_Top20_table$Description <- str_wrap(GO_LHS_Top20_table$Description, width = 45)
+
+# Create a table graphic
+p_table_LHS <- ggtexttable(GO_LHS_Top20_table, 
+                       cols = colnames(GO_LHS_Top20_table),
+                       rows = NULL, theme = ttheme("light"))
+
+EA_LHS <- plot_grid(
+ plot_LHS,
+ NULL,
+ p_table_LHS,
+ ncol = 3,
+ rel_widths = c(1.2,0.02,0.9)
+)
+
+ggsave(here::here("Plots","EA_LHS.png"), plot = EA_LHS, width = 12, height = 7.5, dpi = 600)
+```
+# Maybe?
+```{r}
+#Bubble plot fancy
+BB_TP <- ggplot(rbind(as.data.frame(GO_results_list$TP_DOWN), as.data.frame(GO_results_list$TP_UP)), aes(x = zScore, y = -log10(p.adjust))) +
+  geom_point(aes(size = Count, fill = Description), shape = 24, color = "black", alpha = 0.7) +
   scale_size_continuous(name = "DEG Count") +
   labs(
-    title = "Significantly Enriched GO Terms for DEGs",
+    title = "Significantly Enriched GO Terms for DEGs (Time point)",
     x = "Z-score",
     y = expression(-log[10]("Adjusted p-value (FDR)"))
   ) +
@@ -1152,175 +1198,294 @@ ggplot(go_df_lhs_grouped , aes(x = zScore, y = -log10(p.adjust))) +
   theme(legend.position = "right") +
   guides(fill = "none") 
 
-go_df_lhs$ID
+#Bubble plot fancy
+BB_LHS <- ggplot(rbind(as.data.frame(GO_results_list$LHS_DOWN), as.data.frame(GO_results_list$LHS_UP)), aes(x = zScore, y = -log10(p.adjust))) +
+  geom_point(aes(size = Count, fill = Description), shape = 24, color = "black", alpha = 0.7) +
+  scale_size_continuous(name = "DEG Count") +
+  labs(
+    title = "Significantly Enriched GO Terms for DEGs (Life history stage)",
+    x = "Z-score",
+    y = expression(-log[10]("Adjusted p-value (FDR)"))
+  ) +
+  theme_classic() +
+  theme(legend.position = "right") +
+  guides(fill = "none") 
+
+plot_grid(BB_TP, BB_LHS)
+
+ggplot(top20_labels_TP, aes(x = Regulation, y = Description)) +
+  geom_point(aes(size = Count, color = Regulation, fill = Regulation), shape = 21) +
+  scale_size_continuous(name = "Gene Count") +
+  scale_fill_manual(values = c("Upregulated" = "#1f77b4", "Downregulated" = "#d62728")) +
+  scale_color_manual(values = c("Upregulated" = "#1f77b4", "Downregulated" = "#d62728")) +
+  labs(
+    title = "Top 20 Enriched GO Biological Processes (Up & Downregulated)",
+    x = "Regulation",
+    y = "GO Term"
+  ) +
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size = 10),
+    legend.position = "right"
+  )
+
+barplot(GO_results_list$TP_DOWN, showCategory = 20) +
+  ggtitle("Top Enriched GO Biological Processes")
+
+top20_labels_LHS <- rbind(as.data.frame(GO_results_list$LHS_DOWN), as.data.frame(GO_results_list$LHS_UP)) %>%
+  arrange(p.adjust) %>%
+  slice_head(n = 20)
+
+barplot(top20_labels_LHS, showCategory = 20) +
+  ggtitle("Top Enriched GO Biological Processes")
 ```
 
 ### Revigo in R
+
 ```{r}
 remotes::install_github("ssayols/rrvgo")
 library(rrvgo)
 ```
 
-### Similarity matrix
-```{r}
-simMatrix <- calculateSimMatrix(GOterms_TP_UP$ID,
-                                orgdb="org.Hs.eg.db",
-                                ont="BP",
-                                method="Rel")
-
-scores <- setNames(-log10(GOterms_TP_UP$qvalue), GOterms_TP_UP$ID)
-reducedTerms <- reduceSimMatrix(simMatrix,
-                                scores,
-                                threshold=0.7,
-                                orgdb="org.Hs.eg.db")
-heatmapPlot(simMatrix,
-            reducedTerms,
-            annotateParent=TRUE,
-            annotationLabel="parentTerm",
-            fontsize=6)
-
-#Same but with GOterms from GOrilla
-GOrilla_TP_Down <- c("GO:0072376", "GO:0009617" , "GO:0051707", "GO:0006952", "GO:0045959" , "GO:0030450", "GO:0006959", "GO:0043207", "GO:0006958", "GO:1903027", "GO:0009608", "GO:0009609", "GO:0009607", "GO:0006956", "GO:0030449", "GO:2000257", "GO:0002924", "GO:0002376", "GO:0051704", "GO:0002252", "GO:2000258", "GO:0045916", "GO:0002920", "GO:0002921", "GO:0002713", "GO:0002890", "GO:0002923", "GO:0002673", "GO:0045055", "GO:0070613", "GO:1903317", "GO:0030162", "GO:0006887", "GO:0009605", "GO:0018149", "GO:0032940", "GO:0042742", "GO:0045087", "GO:1903318", "GO:0010955", "GO:0046903", "GO:0002707", "GO:0002704", "GO:0045732", "GO:0002823", "GO:0002274", "GO:0002820", "GO:0030100", "GO:0002712", "GO:0019730", "GO:0002889", "GO:0002215", "GO:1905892", "GO:1905891", "GO:1905895", "GO:1905894", "GO:0072139", "GO:0072378", "GO:2000768", "GO:1902996", "GO:1902998", "GO:1902847", "GO:0007620", "GO:0045861")
-
-GOrilla_TP_Down_qvalue <- c(0.00273, 0.00294, 0.00307, 0.00358, 0.00693, 0.00577, 0.00885, 0.00847, 0.00759, 0.00693, 0.00630, 0.00577, 0.00638, 0.00888, 0.00829, 0.00831, 0.01020, 0.01120, 0.01140, 0.01150, 0.01150, 0.01100, 0.01360, 0.02160, 0.02530, 0.02430, 0.02340, 0.02430, 0.02410, 0.02630, 0.02730, 0.03540, 0.03560, 0.04560, 0.04450, 0.07400, 0.07740, 0.07800, 0.08080, 0.07880, 0.10500, 0.12600, 0.16600, 0.17200, 0.16800, 0.17000, 0.19800, 0.20900, 0.22800, 0.22400, 0.21900, 0.25800, 0.25300, 0.24900, 0.24400, 0.24000, 0.23500, 0.23100, 0.22700, 0.22400, 0.22000, 0.21600, 0.21300, 0.21300)
-
-GOrilla_TP_Down <- as.data.frame(cbind(GOrilla_TP_Down, GOrilla_TP_Down_qvalue))
-GOrilla_TP_Down <- subset(GOrilla_TP_Down, GOrilla_TP_Down_qvalue < 0.05)
-
-simMatrix_GO <- calculateSimMatrix(GOrilla_TP_Down$GOrilla_TP_Down,
-                                orgdb="org.Hs.eg.db",
-                                ont="BP",
-                                method="Rel")
-
-scores_GO <- setNames(-log10(as.numeric(GOrilla_TP_Down$GOrilla_TP_Down_qvalue)), GOrilla_TP_Down$GOrilla_TP_Down)
-reducedTerms_GP <- reduceSimMatrix(simMatrix_GO,
-                                scores_GO,
-                                threshold=0.7,
-                                orgdb="org.Hs.eg.db")
-heatmapPlot(simMatrix_GO,
-            reducedTerms_GP,
-            annotateParent=TRUE,
-            annotationLabel="parentTerm",
-            fontsize=6)
-```
-### Scatterplot of GOTerms
-```{r}
-R_GO <- scatterPlot(simMatrix, reducedTerms) + theme_classic() + 
-  ggtitle("Semantic Similarity of GO Terms: Downregulated TP2") +
-  xlim(-0.6, 0.4) +
-  ylim(-0.4,0.6)
-
-GOrilla_GO <- scatterPlot(simMatrix_GO, reducedTerms_GP) + theme_classic() + 
-  ggtitle("Semantic Similarity of GO Terms: GOrilla") +
-  xlim(-0.6, 0.4) +
-  ylim(-0.4,0.6)
-
-#library(cowplot)
-
-plot_grid(R_GO, GOrilla_GO)
-```
-
-### Similarity matrix
-```{r}
-simMatrix_up <- calculateSimMatrix(GOterms_TP_Down$ID,
-                                orgdb="org.Hs.eg.db",
-                                ont="BP",
-                                method="Rel")
-
-scores_up <- setNames(-log10(GOterms_TP_Down$qvalue), GOterms_TP_Down$ID)
-reducedTerms_up <- reduceSimMatrix(simMatrix_up,
-                                scores_up,
-                                threshold=0.7,
-                                orgdb="org.Hs.eg.db")
-heatmapPlot(simMatrix_up,
-            reducedTerms_up,
-            annotateParent=TRUE,
-            annotationLabel="parentTerm",
-            fontsize=6)
-```
-### Scatterplot of GOTerms
-```{r}
-R_GO_Up <- scatterPlot(simMatrix_up, reducedTerms_up) + theme_classic() + 
-  ggtitle("Semantic Similarity of GO Terms: Upregulated TP2") 
-
-plot_grid(R_GO, R_GO_Up)
-```
-## Life history stage
+### Similarity matrices
 
 ```{r}
-#lhs
-Up_LHS <- read.csv("GenesGO/Upregulated_lhs.csv") %>%
-  mutate(X = toupper(X))
-colnames(Up_LHS)[1] <- "GeneSymbol"
-Down_LHS <- read.csv("GenesGO/Downregulated_lhs.csv") %>%
-  mutate(X = toupper(X))
-colnames(Down_LHS)[1] <- "GeneSymbol"
-LHS <- rbind(Up_LHS, Down_LHS)
+#calculate similarity matrices for all 
+GO_names <- c("TP_DOWN", "TP_UP", "LHS_DOWN", "LHS_UP", "I_TP_PUP_DOWN", "I_TP_PUP_UP", "I_TP_MUM_DOWN", "I_TP_MUM_UP", "I_I_DOWN", "I_I_UP")
+
+#calculate similarity matrix for each file
+sim_matrices <- setNames(
+  lapply(GO_names, function(name) {
+    df <- GO_results_list[[name]]
+    if (!is.null(df) && nrow(df) > 1) {
+      calculateSimMatrix(df$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
+    } else {
+      NULL  # skip or handle cases where df is NULL or too small
+    }
+  }),
+  GO_names
+)
+
+#Reduce terms
+
 ```
-
-```{r}
-#Go enrichment analysis
-GOterms_LHS_UP <- enrichGO(gene = Up_LHS$GeneSymbol, OrgDb = org.Hs.eg.db, universe = Background$GeneSymbol, keyType = "SYMBOL", ont = "BP", pvalueCutoff = 0.05, pAdjustMethod = "BH")
-```
-
-
-### Revigo
-```{r}
-simMatrix_LHS_UP <- calculateSimMatrix(GOterms_LHS_UP$ID,
-                                orgdb="org.Hs.eg.db",
-                                ont="BP",
-                                method="Rel")
-
-scores_LHS_UP <- setNames(-log10(GOterms_LHS_UP$qvalue), GOterms_LHS_UP$ID)
-reducedTerms_LHS_UP <- reduceSimMatrix(simMatrix_LHS_UP,
-                                scores_LHS_UP,
-                                threshold=0.7,
-                                orgdb="org.Hs.eg.db")
-heatmapPlot(simMatrix_LHS_UP,
-            reducedTerms_LHS_UP,
-            annotateParent=TRUE,
-            annotationLabel="parentTerm",
-            fontsize=6)
-```
-#Scatterplot
-```{r}
-R_GO_LHS_UP <- scatterPlot(simMatrix_LHS_UP, reducedTerms_LHS_UP) + theme_classic() + 
-  ggtitle("Semantic Similarity of GO Terms: Downregulated TP2") 
-```
-
-```{r}
-#Go enrichment analysis
-GOterms_LHS_DOWN <- enrichGO(gene = Down_LHS$GeneSymbol, OrgDb = org.Hs.eg.db, universe = Background$GeneSymbol, keyType = "SYMBOL", ont = "BP", pvalueCutoff = 0.05, pAdjustMethod = "BH")
-```
-
-
-### Revigo
-```{r}
-simMatrix_LHS_DOWN <- calculateSimMatrix(GOterms_LHS_DOWN$ID,
-                                orgdb="org.Hs.eg.db",
-                                ont="BP",
-                                method="Rel")
-
-scores_LHS_DOWN <- setNames(-log10(GOterms_LHS_DOWN$qvalue), GOterms_LHS_DOWN$ID)
-reducedTerms_LHS_DOWN <- reduceSimMatrix(simMatrix_LHS_DOWN,
-                                scores_LHS_DOWN,
-                                threshold=0.7,
-                                orgdb="org.Hs.eg.db")
-heatmapPlot(simMatrix_LHS_DOWN,
-            reducedTerms_LHS_DOWN,
-            annotateParent=TRUE,
-            annotationLabel="parentTerm",
-            fontsize=6)
-```
-# Scatterplot
-```{r}
-R_GO_LHS_DOWN <- scatterPlot(simMatrix_LHS_DOWN, reducedTerms_LHS_DOWN) + theme_classic() + 
-  ggtitle("Semantic Similarity of GO Terms: Downregulated TP2") 
-```
-
 # GOterms from GOrilla
 
 ```{r}
-#LOad in GOterms from GOrilla
+#Load in GOterms from GOrilla
+library(readxl)
+file.list <- list.files(path = here("GOterms_GOrilla"), pattern = "\\.xlsx$", full.names = T)
+
+#for loop to load excel files in as data frames
+for (file in file.list) {
+  df_name <- tools::file_path_sans_ext(basename(file))
+  assign(df_name, read_excel(file))}
+
+#Remove non-significant terms
+GOrilla_names <- c("TP_UP", "TP_DOWN", "LHS_UP", "LHS_DOWN", "I_TP_PUP_UP", "I_TP_PUP_DOWN", "I_TP_MUM_UP", "I_TP_MUM_DOWN", "I_I_UP", "I_I_DOWN")
+
+for (name in GOrilla_names) {
+  df <- get(name) 
+  subset <- subset(df, as.numeric(`FDR q-value`) > 0.05)  
+  assign(paste0( "GOrilla_", name), subset) 
+}
+
+#Remove unnecessary files
+rm("TP_UP", "TP_DOWN", "LHS_UP", "LHS_DOWN", "I_TP_PUP_UP", "I_TP_PUP_DOWN", "I_TP_MUM_UP", "I_TP_MUM_DOWN", "I_I_UP", "I_I_DOWN", "subset", "df", "GOrilla_names", "file.list", "name", "df_name", "file")
 ```
 
+### Similarity matrices
+
+```{r}
+GOrilla_names <- c(
+  "GOrilla_TP_UP", "GOrilla_TP_DOWN", "GOrilla_LHS_UP", "GOrilla_LHS_DOWN",
+  "GOrilla_I_TP_PUP_UP", "GOrilla_I_TP_PUP_DOWN", "GOrilla_I_TP_MUM_UP", 
+  "GOrilla_I_TP_MUM_DOWN", "GOrilla_I_I_UP", "GOrilla_I_I_DOWN")
+
+#calculate similarity matrix for each file
+sim_matrices <- setNames(
+  lapply(mget(GOrilla_names), function(df) {
+    calculateSimMatrix(df$`GO term`, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
+  }),
+  GOrilla_names
+)
+```
+
+### Reduce terms
+
+```{r}
+reduced_terms_list <- list()
+
+for (name in GOrilla_names) {
+  if (!exists(name)) {
+    message(paste("Skipping", name, "- object does not exist"))
+    reduced_terms_list[[name]] <- NULL
+    next
+  }
+
+  df <- get(name)
+  simMatrix <- sim_matrices[[name]]
+
+  if (!is.data.frame(df)) {
+    message(paste("Skipping", name, "- not a valid data frame"))
+    reduced_terms_list[[name]] <- NULL
+    next
+  }
+
+  if (!is.matrix(simMatrix) || any(is.na(simMatrix)) || nrow(simMatrix) < 2) {
+    message(paste("Skipping", name, "- similarity matrix is invalid or too small"))
+    reduced_terms_list[[name]] <- NULL
+    next
+  }
+
+  # Ensure names align
+  if (!"GO term" %in% colnames(df) || !"FDR q-value" %in% colnames(df)) {
+    message(paste("Skipping", name, "- required columns not found"))
+    reduced_terms_list[[name]] <- NULL
+    next
+  }
+
+  scores <- -log10(as.numeric(df$`FDR q-value`))
+  names(scores) <- df$`GO term`
+
+  # Filter to only the terms in the similarity matrix
+  common_terms <- intersect(names(scores), rownames(simMatrix))
+  scores <- scores[common_terms]
+  simMatrix_filtered <- simMatrix[common_terms, common_terms]
+
+  if (length(common_terms) < 2) {
+    message(paste("Skipping", name, "- fewer than 2 overlapping GO terms"))
+    reduced_terms_list[[name]] <- NULL
+    next
+  }
+
+  reduced_terms <- reduceSimMatrix(simMatrix_filtered, scores = scores, threshold = 0.7, orgdb = "org.Hs.eg.db")
+  reduced_terms_list[[name]] <- reduced_terms
+}
+```
+
+### Heatmaps
+
+```{r}
+HP_GOrilla_TP_DOWN <- heatmapPlot(sim_matrices$GOrilla_TP_DOWN,
+                                  reduced_terms_list$GOrilla_TP_DOWN,
+                                  annotateParent=TRUE,
+                                  annotationLabel="parentTerm",
+                                  fontsize=6,
+                                  main = "Time Point (Downregulated) (GOrilla)")
+
+HP_GOrilla_LHS_UP <- heatmapPlot(sim_matrices$GOrilla_LHS_UP,
+                                  reduced_terms_list$GOrilla_LHS_UP,
+                                  annotateParent=TRUE,
+                                  annotationLabel="parentTerm",
+                                  fontsize=6,
+                                 main = "Life history stage (Upregulated) (GOrilla)")
+
+HP_GOrilla_LHS_DOWN <- heatmapPlot(sim_matrices$GOrilla_LHS_DOWN,
+                                  reduced_terms_list$GOrilla_LHS_DOWN,
+                                  annotateParent=TRUE,
+                                  annotationLabel="parentTerm",
+                                  fontsize=6,
+                                  main = "Life history stage (Downregulated) (GOrilla)")
+
+plot_grid(HP_GOrilla_LHS_UP$gtable, HP_GOrilla_LHS_DOWN$gtable)
+```
+
+### Scatterplot
+
+```{r}
+SP_GOrilla_TP_DOWN <- scatterPlot(sim_matrices$GOrilla_TP_DOWN, reduced_terms_list$GOrilla_TP_DOWN) + 
+  theme_classic() + 
+  xlim(c(-0.75,0.75)) + 
+  ylim(c(-0.75,0.75)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Time point: downregulated (GOrilla)") 
+
+ggsave(here::here("Plots","SP_GOrilla_TP_DOWN.png"), plot = SP_GOrilla_TP_DOWN, width = 4,5, height = 5, dpi = 600)
+
+SP_GOrilla_LHS_UP <- scatterPlot(sim_matrices$GOrilla_LHS_UP, reduced_terms_list$GOrilla_LHS_UP) + 
+  theme_classic() + 
+  xlim(c(-0.75,0.75)) + 
+  ylim(c(-0.75,0.75)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Life history stage: upregulated (GOrilla)") 
+
+SP_GOrilla_LHS_DOWN <- scatterPlot(sim_matrices$GOrilla_TP_DOWN, reduced_terms_list$GOrilla_TP_DOWN) + 
+  theme_classic() + 
+  xlim(c(-0.75,0.75)) + 
+  ylim(c(-0.75,0.75)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Life history stage: downregulated (GOrilla)") 
+
+SP_LHS_GOrilla <- plot_grid(SP_GOrilla_LHS_UP, SP_GOrilla_LHS_DOWN)
+ggsave(here::here("Plots","SP_LHS_GOrilla.png"), plot = SP_LHS_GOrilla, width = 9, height = 5, dpi = 600)
+
+#Interaction
+SP_GOrilla_I_TP_PUP_UP <- scatterPlot(sim_matrices$GOrilla_I_TP_PUP_UP, reduced_terms_list$GOrilla_I_TP_PUP_UP) + 
+  theme_classic() + 
+  xlim(c(-0.75,0.75)) + 
+  ylim(c(-0.75,0.75)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Time point: upregulated (Pup)")
+
+SP_GOrilla_I_TP_PUP_DOWN <- scatterPlot(sim_matrices$GOrilla_I_TP_PUP_DOWN, reduced_terms_list$GOrilla_I_TP_PUP_DOWN) + 
+  theme_classic() + 
+  xlim(c(-0.75,0.75)) + 
+  ylim(c(-0.75,0.75)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Time point: downregulated (Pup)") 
+
+SP_GOrilla_I_TP_MUM_UP <- scatterPlot(sim_matrices$GOrilla_I_TP_MUM_UP, reduced_terms_list$GOrilla_I_TP_MUM_UP) + 
+  theme_classic() + 
+  xlim(c(-0.75,0.75)) + 
+  ylim(c(-0.75,0.75)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Time point: upregulated (Mother)") 
+
+SP_GOrilla_I_TP_MUM_DOWN <- scatterPlot(sim_matrices$GOrilla_I_TP_MUM_DOWN, reduced_terms_list$GOrilla_I_TP_MUM_DOWN) + 
+  theme_classic() + 
+  xlim(c(-0.75,0.75)) + 
+  ylim(c(-0.75,0.75)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Time point: downregulated (Mother)") 
+
+SP_GOrilla_I_I_UP <- scatterPlot(sim_matrices$GOrilla_I_I_UP, reduced_terms_list$GOrilla_I_I_UP) + 
+  theme_classic() +
+  xlim(c(-0.75,0.75)) + 
+  ylim(c(-0.75,0.75)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Interaction: Upregulated") 
+
+#SP_GOrilla_I_I_DOWN <- scatterPlot(sim_matrices$GOrilla_I_I_DOWN, reduced_terms_list$GOrilla_I_I_DOWN) + theme_classic() + 
+#  ggtitle("Interaction: Downregulated interaction") 
+#Not enough info
+
+SP_Interaction_GOrilla <- plot_grid(SP_GOrilla_I_TP_PUP_UP, SP_GOrilla_I_TP_PUP_DOWN, NULL, SP_GOrilla_I_TP_MUM_UP, SP_GOrilla_I_TP_MUM_DOWN, SP_GOrilla_I_I_UP)
+
+title <- ggdraw() + 
+  draw_label(
+    "Interaction (GOrilla)",
+    fontface = 'bold',
+    x = 0,
+    hjust = 0
+  ) +
+  theme(
+    # add margin on the left of the drawing canvas,
+    # so title is aligned with left edge of first plot
+    plot.margin = margin(0, 0, 0, 7)
+  )
+
+SP_Interaction_GOrilla_title <- plot_grid(title, SP_Interaction_GOrilla,
+          ncol = 1,
+          rel_heights = c(0.1, 1))
+
+ggsave(here::here("Plots","SP_Interaction_GOrilla_title.png"), plot = SP_Interaction_GOrilla_title, width = 13.5, height = 10, dpi = 600)
+```
