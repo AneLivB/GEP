@@ -1110,7 +1110,7 @@ EA_TP <- plot_grid(
 ggsave(here::here("Plots","EA_TP.png"), plot = EA_TP, width = 12, height = 7.5, dpi = 600)
 ```
 
-#Life history stage
+### Life history stage
 ```{r}
 GO_LHS_DOWN <- as.data.frame(GO_results_list$LHS_DOWN) %>%
   mutate(Regulation = "Downregulated") 
@@ -1240,7 +1240,7 @@ barplot(top20_labels_LHS, showCategory = 20) +
   ggtitle("Top Enriched GO Biological Processes")
 ```
 
-### Revigo in R
+## Revigo in R
 
 ```{r}
 remotes::install_github("ssayols/rrvgo")
@@ -1254,21 +1254,137 @@ library(rrvgo)
 GO_names <- c("TP_DOWN", "TP_UP", "LHS_DOWN", "LHS_UP", "I_TP_PUP_DOWN", "I_TP_PUP_UP", "I_TP_MUM_DOWN", "I_TP_MUM_UP", "I_I_DOWN", "I_I_UP")
 
 #calculate similarity matrix for each file
-sim_matrices <- setNames(
+sim_matrices_GO <- setNames(
   lapply(GO_names, function(name) {
     df <- GO_results_list[[name]]
     if (!is.null(df) && nrow(df) > 1) {
       calculateSimMatrix(df$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
     } else {
-      NULL  # skip or handle cases where df is NULL or too small
+      NULL  #skip if df is NULL or too small
     }
   }),
   GO_names
 )
 
 #Reduce terms
+reduced_terms_list_GO <- list()
 
+for (name in GO_names) {
+  df <- GO_results_list[[name]]
+  sim_matrix <- sim_matrices_GO[[name]]
+  
+    if (!is.matrix(sim_matrix) || any(is.na(sim_matrix)) || nrow(sim_matrix) < 2) {
+    message(paste("Skipping", name, "- similarity matrix is invalid or too small"))
+    reduced_terms_list_GO[[name]] <- NULL
+    next
+  }
+
+  # Compute scores
+  scores <- -log10(as.numeric(df$p.adjust))
+  names(scores) <- df$ID
+
+  # Reduce terms
+  reduced_terms_list_GO[[name]] <- reduceSimMatrix(
+    simMatrix = sim_matrix,
+    scores = scores,
+    threshold = 0.7,
+    orgdb = "org.Hs.eg.db"
+  )
+}
 ```
+
+## Heatmaps
+
+```{r}
+HP_GO_TP_UP <- heatmapPlot(sim_matrices_GO$TP_UP,
+                                  reduced_terms_list_GO$TP_UP,
+                                  annotateParent=TRUE,
+                                  annotationLabel="parentTerm",
+                                  fontsize=6,
+                                  main = "Time Point (Upregulated)")
+
+HP_GO_TP_DOWN <- heatmapPlot(sim_matrices_GO$TP_DOWN,
+                                  reduced_terms_list_GO$TP_DOWN,
+                                  annotateParent=TRUE,
+                                  annotationLabel="parentTerm",
+                                  fontsize=6,
+                                  main = "Time Point (Downregulated)")
+
+HP_GO_TP <- plot_grid(HP_GO_TP_UP$gtable, HP_GO_TP_DOWN$gtable)
+
+#Try to compress the description to take less space
+library(stringr)
+
+reduced_terms_list_GO$LHS_DOWN$parentTerm <- str_wrap(
+  reduced_terms_list_GO$LHS_DOWN$parentTerm,
+  width = 30
+)
+
+reduced_terms_list_GO$LHS_UP$parentTerm <- str_wrap(
+  reduced_terms_list_GO$LHS_UP$parentTerm,
+  width = 30
+)
+
+HP_GO_LHS_UP <- heatmapPlot(sim_matrices_GO$LHS_UP,
+                                  reduced_terms_list_GO$LHS_UP,
+                                  annotateParent=TRUE,
+                                  annotationLabel="parentTerm",
+                                  fontsize=6,
+                                 main = "Life history stage (Upregulated)")
+
+HP_GO_LHS_DOWN <- heatmapPlot(sim_matrices_GO$LHS_DOWN,
+                                  reduced_terms_list_GO$LHS_DOWN,
+                                  annotateParent=TRUE,
+                                  annotationLabel="parentTerm",
+                                  fontsize=6,
+                                  main = "Life history stage (Downregulated)")
+
+HP_GO_LHS <- plot_grid(HP_GO_LHS_UP$gtable, HP_GO_LHS_DOWN$gtable)
+ggsave(here::here("Plots","HP_GO_LHS.png"), plot = HP_GO_LHS, width = 12, height = 6, dpi = 600)
+```
+
+## Scatterplots
+```{r}
+SP_GO_TP_UP <- scatterPlot(sim_matrices_GO$TP_UP, reduced_terms_list_GO$TP_UP) + 
+  theme_classic() + 
+  xlim(c(-1,1)) + 
+  ylim(c(-1,1)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Time point: downregulated") 
+
+SP_GO_TP_DOWN <- scatterPlot(sim_matrices_GO$TP_DOWN, reduced_terms_list_GO$TP_DOWN) + 
+  theme_classic() + 
+  xlim(c(-1,1)) + 
+  ylim(c(-1,1)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Time point: downregulated") 
+
+SP_TP_GO <- plot_grid(SP_GO_TP_UP, SP_GO_TP_DOWN)
+ggsave(here::here("Plots","SP_TP_GO.png"), plot = SP_TP_GO, width = 8.5, height = 4.5, dpi = 600)
+
+SP_GO_LHS_UP <- scatterPlot(sim_matrices_GO$LHS_UP, reduced_terms_list_GO$LHS_UP) + 
+  theme_classic() + 
+  xlim(c(-1,1)) + 
+  ylim(c(-1,1)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Life history stage: upregulated") 
+
+SP_GO_LHS_DOWN <- scatterPlot(sim_matrices_GO$TP_DOWN, reduced_terms_list_GO$TP_DOWN) + 
+  theme_classic() + 
+  xlim(c(-1,1)) + 
+  ylim(c(-1,1)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Life history stage: downregulated") 
+
+SP_LHS_GO <- plot_grid(SP_GO_LHS_UP, SP_GO_LHS_DOWN)
+ggsave(here::here("Plots","SP_LHS_GO.png"), plot = SP_LHS_GO, width = 8.5, height = 4.5, dpi = 600)
+```
+
+
 # GOterms from GOrilla
 
 ```{r}
@@ -1402,7 +1518,7 @@ SP_GOrilla_TP_DOWN <- scatterPlot(sim_matrices$GOrilla_TP_DOWN, reduced_terms_li
   ylab("Semantic space y") +
   ggtitle("Time point: downregulated (GOrilla)") 
 
-ggsave(here::here("Plots","SP_GOrilla_TP_DOWN.png"), plot = SP_GOrilla_TP_DOWN, width = 4,5, height = 5, dpi = 600)
+ggsave(here::here("Plots","SP_GOrilla_TP_DOWN.png"), plot = SP_GOrilla_TP_DOWN, width = 4.5, height = 5, dpi = 600)
 
 SP_GOrilla_LHS_UP <- scatterPlot(sim_matrices$GOrilla_LHS_UP, reduced_terms_list$GOrilla_LHS_UP) + 
   theme_classic() + 
