@@ -140,41 +140,53 @@ PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage)) 
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
-  scale_color_manual(values = c("#728C59", "#E3B778")) +
+  scale_color_manual(values = c("#E69F00", "#56B4E9")) +
   xlim(-200, 200) +
   ylim(-200, 200) +
-  labs(title = "c) PCA: Life history stage", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
+  labs(title = "c) Life history stage", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
 
+#levels(pc_scores$group)
+levels(pc_scores$group) <- c("Day 0", "Day 60")
 PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
-  scale_color_manual(values = c("#728C59", "#E3B778")) +
+  scale_color_manual(values = c("#E69F00", "#56B4E9")) +
   xlim(-200, 200) +
   ylim(-200, 200) +
-  labs(title = "a) PCA: Time point", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
+  labs(title = "a) Time point", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
 
+#levels(pc_scores$year)
+levels(pc_scores$year) <- c("2019", "2020")
 PCA_Y <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = year)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
-  scale_color_manual(values = c("#728C59", "#E3B778")) +
+  scale_color_manual(values = c("#E69F00", "#56B4E9")) +
   xlim(-200, 200) +
   ylim(-200, 200) +
-  labs(title = "c) PCA: Season", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
+  labs(title = "c) Season", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
 
 PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
-  scale_color_manual(values = c("#728C59", "#E3B778")) +
+  scale_color_manual(values = c("#E69F00", "#56B4E9")) +
   xlim(-200, 200) +
   ylim(-200, 200) +
-  labs(title = "d) PCA: Colony", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
+  labs(title = "d) Colony", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
 
-PCA_plots <- ggarrange(PCA_TP, PCA_LHS, PCA_Y, PCA_C)
+legend_theme <- theme(
+    legend.position = c(0.95, 0.95),  # (x, y) coordinates from bottom-left = (0,0) to top-right = (1,1)
+    legend.justification = c("right", "top"),  # Anchor legend by its top-right corner
+    legend.background = element_rect(fill = alpha('white', 0.7), color = NA),  # Optional: translucent background
+    legend.key.size = unit(0.8, "lines")  # Optional: adjust size
+  )
 
-ggsave(here::here("Plots","PCA_plots.png"), plot = PCA_plots, width = 7.2, height = 5, dpi = 600)
+PCA_plots <- ggarrange(PCA_TP + legend_theme, PCA_LHS + legend_theme, 
+                       PCA_Y + legend_theme, PCA_C + legend_theme)
+
+ggsave(here::here("Plots","PCA_plots.png"), plot = PCA_plots, dpi = 600)
 ```
 
 The PCA identified one outlier, which was removed from the dataset for further analysis.
@@ -1384,224 +1396,3 @@ SP_LHS_GO <- plot_grid(SP_GO_LHS_UP, SP_GO_LHS_DOWN)
 ggsave(here::here("Plots","SP_LHS_GO.png"), plot = SP_LHS_GO, width = 8.5, height = 4.5, dpi = 600)
 ```
 
-
-# GOterms from GOrilla
-
-```{r}
-#Load in GOterms from GOrilla
-library(readxl)
-file.list <- list.files(path = here("GOterms_GOrilla"), pattern = "\\.xlsx$", full.names = T)
-
-#for loop to load excel files in as data frames
-for (file in file.list) {
-  df_name <- tools::file_path_sans_ext(basename(file))
-  assign(df_name, read_excel(file))}
-
-#Remove non-significant terms
-GOrilla_names <- c("TP_UP", "TP_DOWN", "LHS_UP", "LHS_DOWN", "I_TP_PUP_UP", "I_TP_PUP_DOWN", "I_TP_MUM_UP", "I_TP_MUM_DOWN", "I_I_UP", "I_I_DOWN")
-
-for (name in GOrilla_names) {
-  df <- get(name) 
-  subset <- subset(df, as.numeric(`FDR q-value`) > 0.05)  
-  assign(paste0( "GOrilla_", name), subset) 
-}
-
-#Remove unnecessary files
-rm("TP_UP", "TP_DOWN", "LHS_UP", "LHS_DOWN", "I_TP_PUP_UP", "I_TP_PUP_DOWN", "I_TP_MUM_UP", "I_TP_MUM_DOWN", "I_I_UP", "I_I_DOWN", "subset", "df", "GOrilla_names", "file.list", "name", "df_name", "file")
-```
-
-### Similarity matrices
-
-```{r}
-GOrilla_names <- c(
-  "GOrilla_TP_UP", "GOrilla_TP_DOWN", "GOrilla_LHS_UP", "GOrilla_LHS_DOWN",
-  "GOrilla_I_TP_PUP_UP", "GOrilla_I_TP_PUP_DOWN", "GOrilla_I_TP_MUM_UP", 
-  "GOrilla_I_TP_MUM_DOWN", "GOrilla_I_I_UP", "GOrilla_I_I_DOWN")
-
-#calculate similarity matrix for each file
-sim_matrices <- setNames(
-  lapply(mget(GOrilla_names), function(df) {
-    calculateSimMatrix(df$`GO term`, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
-  }),
-  GOrilla_names
-)
-```
-
-### Reduce terms
-
-```{r}
-reduced_terms_list <- list()
-
-for (name in GOrilla_names) {
-  if (!exists(name)) {
-    message(paste("Skipping", name, "- object does not exist"))
-    reduced_terms_list[[name]] <- NULL
-    next
-  }
-
-  df <- get(name)
-  simMatrix <- sim_matrices[[name]]
-
-  if (!is.data.frame(df)) {
-    message(paste("Skipping", name, "- not a valid data frame"))
-    reduced_terms_list[[name]] <- NULL
-    next
-  }
-
-  if (!is.matrix(simMatrix) || any(is.na(simMatrix)) || nrow(simMatrix) < 2) {
-    message(paste("Skipping", name, "- similarity matrix is invalid or too small"))
-    reduced_terms_list[[name]] <- NULL
-    next
-  }
-
-  # Ensure names align
-  if (!"GO term" %in% colnames(df) || !"FDR q-value" %in% colnames(df)) {
-    message(paste("Skipping", name, "- required columns not found"))
-    reduced_terms_list[[name]] <- NULL
-    next
-  }
-
-  scores <- -log10(as.numeric(df$`FDR q-value`))
-  names(scores) <- df$`GO term`
-
-  # Filter to only the terms in the similarity matrix
-  common_terms <- intersect(names(scores), rownames(simMatrix))
-  scores <- scores[common_terms]
-  simMatrix_filtered <- simMatrix[common_terms, common_terms]
-
-  if (length(common_terms) < 2) {
-    message(paste("Skipping", name, "- fewer than 2 overlapping GO terms"))
-    reduced_terms_list[[name]] <- NULL
-    next
-  }
-
-  reduced_terms <- reduceSimMatrix(simMatrix_filtered, scores = scores, threshold = 0.7, orgdb = "org.Hs.eg.db")
-  reduced_terms_list[[name]] <- reduced_terms
-}
-```
-
-### Heatmaps
-
-```{r}
-HP_GOrilla_TP_DOWN <- heatmapPlot(sim_matrices$GOrilla_TP_DOWN,
-                                  reduced_terms_list$GOrilla_TP_DOWN,
-                                  annotateParent=TRUE,
-                                  annotationLabel="parentTerm",
-                                  fontsize=6,
-                                  main = "Time Point (Downregulated) (GOrilla)")
-
-HP_GOrilla_LHS_UP <- heatmapPlot(sim_matrices$GOrilla_LHS_UP,
-                                  reduced_terms_list$GOrilla_LHS_UP,
-                                  annotateParent=TRUE,
-                                  annotationLabel="parentTerm",
-                                  fontsize=6,
-                                 main = "Life history stage (Upregulated) (GOrilla)")
-
-HP_GOrilla_LHS_DOWN <- heatmapPlot(sim_matrices$GOrilla_LHS_DOWN,
-                                  reduced_terms_list$GOrilla_LHS_DOWN,
-                                  annotateParent=TRUE,
-                                  annotationLabel="parentTerm",
-                                  fontsize=6,
-                                  main = "Life history stage (Downregulated) (GOrilla)")
-
-plot_grid(HP_GOrilla_LHS_UP$gtable, HP_GOrilla_LHS_DOWN$gtable)
-```
-
-### Scatterplot
-
-```{r}
-SP_GOrilla_TP_DOWN <- scatterPlot(sim_matrices$GOrilla_TP_DOWN, reduced_terms_list$GOrilla_TP_DOWN) + 
-  theme_classic() + 
-  xlim(c(-0.75,0.75)) + 
-  ylim(c(-0.75,0.75)) +
-  xlab("Semantic space x") +
-  ylab("Semantic space y") +
-  ggtitle("Time point: downregulated (GOrilla)") 
-
-ggsave(here::here("Plots","SP_GOrilla_TP_DOWN.png"), plot = SP_GOrilla_TP_DOWN, width = 4.5, height = 5, dpi = 600)
-
-SP_GOrilla_LHS_UP <- scatterPlot(sim_matrices$GOrilla_LHS_UP, reduced_terms_list$GOrilla_LHS_UP) + 
-  theme_classic() + 
-  xlim(c(-0.75,0.75)) + 
-  ylim(c(-0.75,0.75)) +
-  xlab("Semantic space x") +
-  ylab("Semantic space y") +
-  ggtitle("Life history stage: upregulated (GOrilla)") 
-
-SP_GOrilla_LHS_DOWN <- scatterPlot(sim_matrices$GOrilla_TP_DOWN, reduced_terms_list$GOrilla_TP_DOWN) + 
-  theme_classic() + 
-  xlim(c(-0.75,0.75)) + 
-  ylim(c(-0.75,0.75)) +
-  xlab("Semantic space x") +
-  ylab("Semantic space y") +
-  ggtitle("Life history stage: downregulated (GOrilla)") 
-
-SP_LHS_GOrilla <- plot_grid(SP_GOrilla_LHS_UP, SP_GOrilla_LHS_DOWN)
-ggsave(here::here("Plots","SP_LHS_GOrilla.png"), plot = SP_LHS_GOrilla, width = 9, height = 5, dpi = 600)
-
-#Interaction
-SP_GOrilla_I_TP_PUP_UP <- scatterPlot(sim_matrices$GOrilla_I_TP_PUP_UP, reduced_terms_list$GOrilla_I_TP_PUP_UP) + 
-  theme_classic() + 
-  xlim(c(-0.75,0.75)) + 
-  ylim(c(-0.75,0.75)) +
-  xlab("Semantic space x") +
-  ylab("Semantic space y") +
-  ggtitle("Time point: upregulated (Pup)")
-
-SP_GOrilla_I_TP_PUP_DOWN <- scatterPlot(sim_matrices$GOrilla_I_TP_PUP_DOWN, reduced_terms_list$GOrilla_I_TP_PUP_DOWN) + 
-  theme_classic() + 
-  xlim(c(-0.75,0.75)) + 
-  ylim(c(-0.75,0.75)) +
-  xlab("Semantic space x") +
-  ylab("Semantic space y") +
-  ggtitle("Time point: downregulated (Pup)") 
-
-SP_GOrilla_I_TP_MUM_UP <- scatterPlot(sim_matrices$GOrilla_I_TP_MUM_UP, reduced_terms_list$GOrilla_I_TP_MUM_UP) + 
-  theme_classic() + 
-  xlim(c(-0.75,0.75)) + 
-  ylim(c(-0.75,0.75)) +
-  xlab("Semantic space x") +
-  ylab("Semantic space y") +
-  ggtitle("Time point: upregulated (Mother)") 
-
-SP_GOrilla_I_TP_MUM_DOWN <- scatterPlot(sim_matrices$GOrilla_I_TP_MUM_DOWN, reduced_terms_list$GOrilla_I_TP_MUM_DOWN) + 
-  theme_classic() + 
-  xlim(c(-0.75,0.75)) + 
-  ylim(c(-0.75,0.75)) +
-  xlab("Semantic space x") +
-  ylab("Semantic space y") +
-  ggtitle("Time point: downregulated (Mother)") 
-
-SP_GOrilla_I_I_UP <- scatterPlot(sim_matrices$GOrilla_I_I_UP, reduced_terms_list$GOrilla_I_I_UP) + 
-  theme_classic() +
-  xlim(c(-0.75,0.75)) + 
-  ylim(c(-0.75,0.75)) +
-  xlab("Semantic space x") +
-  ylab("Semantic space y") +
-  ggtitle("Interaction: Upregulated") 
-
-#SP_GOrilla_I_I_DOWN <- scatterPlot(sim_matrices$GOrilla_I_I_DOWN, reduced_terms_list$GOrilla_I_I_DOWN) + theme_classic() + 
-#  ggtitle("Interaction: Downregulated interaction") 
-#Not enough info
-
-SP_Interaction_GOrilla <- plot_grid(SP_GOrilla_I_TP_PUP_UP, SP_GOrilla_I_TP_PUP_DOWN, NULL, SP_GOrilla_I_TP_MUM_UP, SP_GOrilla_I_TP_MUM_DOWN, SP_GOrilla_I_I_UP)
-
-title <- ggdraw() + 
-  draw_label(
-    "Interaction (GOrilla)",
-    fontface = 'bold',
-    x = 0,
-    hjust = 0
-  ) +
-  theme(
-    # add margin on the left of the drawing canvas,
-    # so title is aligned with left edge of first plot
-    plot.margin = margin(0, 0, 0, 7)
-  )
-
-SP_Interaction_GOrilla_title <- plot_grid(title, SP_Interaction_GOrilla,
-          ncol = 1,
-          rel_heights = c(0.1, 1))
-
-ggsave(here::here("Plots","SP_Interaction_GOrilla_title.png"), plot = SP_Interaction_GOrilla_title, width = 13.5, height = 10, dpi = 600)
-```
