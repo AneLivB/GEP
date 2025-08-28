@@ -94,47 +94,47 @@ pc_scores$SampleID <- rownames(pc_scores)
 pc_scores <- cbind(pc_scores, d_n$samples[match(pc_scores$SampleID, rownames(d_n$samples)), ])
 
 PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage)) +
-  geom_point(size = 3) +
+  geom_point(size = 2) +
   theme_classic() +
-  stat_ellipse(type = "norm", size = 1) +
+  stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "PCA: Life history stage", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = "Life history stage")
+  labs(title = "(b) Life history stage", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = NULL)
 
 #levels(pc_scores$year)
 levels(pc_scores$year) <- c("2019", "2020")
 PCA_Y <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = year)) +
-  geom_point(size = 3) +
+  geom_point(size = 2) +
   theme_classic() +
-  stat_ellipse(type = "norm", size = 1) +
+  stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "PCA: Season", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = "Season")
+  labs(title = "(c) Season", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = NULL)
 
 #levels(pc_scores$group)
 levels(pc_scores$group) <- c("Day 0", "Day 60")
 PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group)) +
-  geom_point(size = 3) +
+  geom_point(size = 2) +
   theme_classic() +
-  stat_ellipse(type = "norm", size = 1) +
+  stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "PCA: Time point", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = "Time point")
+  labs(title = "(a) Time point", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = NULL)
 
 PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
-  geom_point(size = 3) +
+  geom_point(size = 2) +
   theme_classic() +
-  stat_ellipse(type = "norm", size = 1) +
+  stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "PCA: Colony", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = "Colony")
+  labs(title = "(d) Colony", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = NULL)
 
 legend_theme_outlier <- theme(
     legend.position = c(0.05, 0.95), 
     legend.justification = c("left", "top"),  
     legend.background = element_rect(fill = alpha('white', 0.7), color = NA),  
     legend.key.size = unit(0.8, "lines"),
-    text = element_text(family = "Arial"))
+    text = element_text(family = "Arial", size = 14))
 
 PCA_plots_outlier <- plot_grid(PCA_TP + legend_theme_outlier + theme(axis.title.x = element_blank()), 
                                PCA_LHS + legend_theme_outlier + theme(axis.title.x = element_blank(),
@@ -217,7 +217,7 @@ legend_theme <- theme(
     legend.justification = c("right", "top"), 
     legend.background = element_rect(fill = alpha('white', 0.7), color = NA), 
     legend.key.size = unit(0.8, "lines"), 
-    text = element_text(family = "Arial"))
+    text = element_text(family = "Arial", size = 14))
 
 PCA_plots <- plot_grid(PCA_TP + legend_theme + theme(axis.title.x = element_blank()),
                        PCA_LHS + legend_theme + theme(axis.title.x = element_blank(),
@@ -273,31 +273,35 @@ rm(counts_per_million, density_plot, df_long, df_melted, log_counts_per_million,
 ![Gene count density plot](Plots/density_plot.png)
 
 # Differential gene expression analysis
-
+In this section, we will perform differential gene expression analysis to identify genes that are differentially expressed between the four main contasts: Time point, Life hisotry stage, Colony and Season. 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 clrs <- c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5", "'Not significant'" = "grey20")
 lfc <- 1 #log fold change of 1 is pretty standard but explore further
 #a doubling in the original scaling is equal to a log2 fold change of 1
 #a quadrupling is equal to a log2 fold change of 2
 lfc_half <- 0.5
 adj.P.value <- 0.05
-fig_theme <- theme(text = element_text(family = "sans", size = 10),
+fig_theme <- theme(text = element_text(family = "Arial", size = 14),
                    legend.title = element_blank(),
-                   legend.text=element_text(size=9),
-                   axis.text.x = element_text(size = 9),
-                   axis.text.y = element_text(size = 9))
+                   legend.text=element_text(size=12),
+                   axis.text.x = element_text(size =12),
+                   axis.text.y = element_text(size = 12))
 
 ann_colors <- list(
   TP = c("Day 0" = "#8B9E58", "Day 60" = "#638B9B"),
-  LHS = c(Mother = "#8B1B1E", Pup = "#C46A00")
+  LHS = c(Mother = "#C44B4E", Pup = "#C46A00")
 )
 ```
 
 ## Time point: Analysis by Bernice
 
-An example analysis where Bernice assessed differential expression per gene between the two time points (start vs end).
+BS assessed differential expression per gene between the two time points (start vs end).
 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 # #-------------- ANALYSIS OF TIME POINT --------------##
 # design <- model.matrix(~ -1 + group, data = d_n$samples) #setting up model contrasts is more straight forward in the absence of an intercept for timepoint
 # contr.matrix <- makeContrasts(
@@ -394,8 +398,10 @@ tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(P.Value), color = Signi
 ```
 
 ### Heatmap
-
+Creating a heatmap to visualise the differentially expressed genes between the two start points. 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 #Create heatmap for differentially expressed genes between time points
 DEG_tp <- rownames(Filteredgenes_tp)
 
@@ -424,9 +430,10 @@ heatmap_tp <- pheatmap(matrix_tp,
                        show_colnames = FALSE,
                        annotation_legend = FALSE,
                        legend = F,
+                       fontsize = 14,
                        fontsize_col = 7,
                        fontsize_row = 6,
-                       main = "Time point")
+                       main = "(a) Time point")
 
 ggsave(here::here("Plots","heatmap_tp.png"), plot = heatmap_tp, width = 7, height = 2, dpi = 600)
 
@@ -435,8 +442,10 @@ ggsave(here::here("Plots","heatmap_tp.png"), plot = heatmap_tp, width = 7, heigh
 ![Heatmap: Time point](Plots/heatmap_tp.png)
 
 ## Life stages
-
+Analysis performed by ALB using the framework outlined by BS. 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 # #Create a design matrix
 # design_lhs <- model.matrix(~ -1 + life_history_stage, data = d_n$samples) #model contrasts without intercept is easier
@@ -533,8 +542,10 @@ lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(P.Value), color = Sig
 ```
 
 ### Heatmap
-
+Creating a heatmap to visualise the differentially expressed genes between the two life history stages.
 ```{r}
+#| label: load_data
+#| echo: FALSE
 #Create heatmap for differentially expressed genes between time points
 DEG_lhs <- rownames(Filteredgenes_lhs)
 
@@ -563,9 +574,10 @@ heatmap_lhs <- pheatmap(matrix_lhs,
                        show_colnames = F,
                        annotation_legend = FALSE,
                        legend = F,
+                       fontsize = 14,
                        fontsize_col = 7,
                        fontsize_row = 6,
-                       main = "Life history stage")
+                       main = "(b) Life history stage")
 
 
 ggsave(here::here("Plots","heatmap_lhs.png"), plot = heatmap_lhs, width = 7, height = 7, dpi = 600)
@@ -574,8 +586,10 @@ ggsave(here::here("Plots","heatmap_lhs.png"), plot = heatmap_lhs, width = 7, hei
 ![Heatmap: Life history stage](Plots/heatmap_lhs.png)
 
 ## Colony
-
+Analysis performed by ALB using the framework outlined by BS. 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 # #Create a design matrix
 #design_c <- model.matrix(~ -1 + colony, data = d_n$samples) #model contrasts without intercept is easier
@@ -661,8 +675,10 @@ c_plot <- ggplot(Allgenes_c, aes(x = logFC, y = -log10(P.Value), color = Signifi
 ```
 
 ## Season
-
+Analysis performed by ALB using the framework outlined by BS. 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 # #Create a design matrix
 # design_y <- model.matrix(~ -1 + year, data = d_n$samples) #model contrasts without intercept is easier
@@ -754,16 +770,18 @@ tp_plot <- tp_plot + fig_theme + theme(axis.title.x = element_blank())
 # Combine plots
 DEG_all <- ggarrange(tp_plot, lhs_plot, y_plot, c_plot, common.legend = T, legend = "bottom")
 
-ggsave(here::here("Plots","DEG_all.png"), plot = DEG_all, width = 7.2, height = 5, dpi = 600)
+ggsave(here::here("Plots","DEG_all.png"), plot = DEG_all, width = 7, height = 7, dpi = 600)
 ```
 
 ![Differential gene expression analysis](Plots/DEG_all.png)
 
 # Interactions
-
+In this section, we perform a differential gene expression analysis between biologically relevant interactions between the main contrasts. 
 ## Year and life history stage interaction
-
+Framework for differential gene expression analysis using interactions by ALB. 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 # #Simple interaction (limma manual 9.5.2)
 # #Create a design matrix including life history stage and its interaction with year
 # d_n$samples$y.lhs <- as.factor(paste(d_n$samples$year, d_n$samples$life_history_stage, sep = "."))
@@ -824,8 +842,10 @@ summary(dt_interaction)
 ```
 
 ## Year and colony interaction
-
+Framework for differential gene expression analysis using interactions by ALB. 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 # #Simple interaction (limma manual 9.5.2)
 # #Create a design matrix including life history stage and its interaction with colony
 # d_n$samples$y.colony <- as.factor(paste(d_n$samples$year, d_n$samples$colony, sep = "."))
@@ -885,8 +905,10 @@ summary(dt_interaction2)
 ```
 
 ## Time point and life stage interaction
-
+Framework for differential gene expression analysis using interactions by ALB. 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 # #Simple interaction (limma manual 9.5.2)
 # #Create a design matrix including life history stage and its interaction with colony
 # d_n$samples$tp.lhs <- as.factor(paste(d_n$samples$group, d_n$samples$life_history_stage, sep = "."))
@@ -985,8 +1007,10 @@ for (name in names(interaction3_list)) {
 #Allgenes_Interaction3[Names,]
 ```
 ### Heatmap
-
+Creating a heatmap to visualise the differentially expressed genes in the interaction between life history stage and time point. 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 #Create heatmaps for differentially expressed genes in each contrast
 DEG_EndvsStartMum <- rownames(Filtered_EndvsStartMum)
 DEG_EndvsStartPup <- rownames(Filtered_EndvsStartPup)
@@ -1049,9 +1073,10 @@ heatmap_EndvsStartMum <- pheatmap(matrix_EndvsStartMum,
                        show_colnames = F,
                        annotation_legend = FALSE,
                        legend = F,
+                       fontsize = 14,
                        fontsize_col = 7,
                        fontsize_row = 6,
-                       main = "Mothers: Time Point")
+                       main = "(a) Interaction: Time Point (Mothers)")
 
 heatmap_EndvsStartPup <- pheatmap(matrix_EndvsStartPup,
                        scale = "row",  # normalize rows (genes)
@@ -1066,9 +1091,10 @@ heatmap_EndvsStartPup <- pheatmap(matrix_EndvsStartPup,
                        show_colnames = F,
                        annotation_legend = FALSE,
                        legend = F,
+                       fontsize = 14,
                        fontsize_col = 7,
                        fontsize_row = 6,
-                       main = "Pups: Time Point")
+                       main = "(b) interaction: Time Point (Pups)")
 
 heatmap_interaction <- pheatmap(matrix_interaction,
                        scale = "row", 
@@ -1083,9 +1109,10 @@ heatmap_interaction <- pheatmap(matrix_interaction,
                        show_colnames = F,
                        annotation_legend = FALSE,
                        legend = F,
+                       fontsize = 14,
                        fontsize_col = 7,
                        fontsize_row = 6,
-                       main = "Interaction: Time point & life history stage")
+                       main = "(c) Interaction: Time point & life history stage")
 
 
 ggsave(here::here("Plots","heatmap_EndvsStartMum.png"), plot = heatmap_EndvsStartMum, width = 7, height = 3.25, dpi = 600)
@@ -1095,12 +1122,83 @@ ggsave(here::here("Plots","heatmap_interaction.png"), plot = heatmap_interaction
 
 ### Figure of DEG for interaction
 
+```{r}
+#| label: load_data
+#| echo: FALSE
+#Plot DEG
+
+Allgenes_EndvsStartMum <- as.data.frame(topTreat(tfit_interaction3, coef = "EndvsStartMum", n = nrow(tfit_interaction3)))
+Allgenes_EndvsStartPup <- as.data.frame(topTreat(tfit_interaction3, coef = "EndvsStartPup", n = nrow(tfit_interaction3)))
+Allgenes_Interaction3 <- as.data.frame(topTreat(tfit_interaction3, coef = "Interaction", n = nrow(tfit_interaction3)))
+
+
+#Significance
+Allgenes_EndvsStartMum$Significance <- "'Not significant'"
+Allgenes_EndvsStartMum$Significance[Allgenes_EndvsStartMum$adj.P.Val < adj.P.value & Allgenes_EndvsStartMum$logFC >= lfc] <- "Upregulated"
+Allgenes_EndvsStartMum$Significance[Allgenes_EndvsStartMum$adj.P.Val < adj.P.value & Allgenes_EndvsStartMum$logFC <= -lfc] <- "Downregulated"
+
+Allgenes_EndvsStartPup$Significance <- "'Not significant'"
+Allgenes_EndvsStartPup$Significance[Allgenes_EndvsStartPup$adj.P.Val < adj.P.value & Allgenes_EndvsStartPup$logFC >= lfc] <- "Upregulated"
+Allgenes_EndvsStartPup$Significance[Allgenes_EndvsStartPup$adj.P.Val < adj.P.value & Allgenes_EndvsStartPup$logFC <= -lfc] <- "Downregulated"
+
+Allgenes_Interaction3$Significance <- "'Not significant'"
+Allgenes_Interaction3$Significance[Allgenes_Interaction3$adj.P.Val < adj.P.value & Allgenes_Interaction3$logFC >= lfc] <- "Upregulated"
+Allgenes_Interaction3$Significance[Allgenes_Interaction3$adj.P.Val < adj.P.value & Allgenes_Interaction3$logFC <= -lfc] <- "Downregulated"
+
+
+ITP_MUM_plot <- ggplot(Allgenes_EndvsStartMum, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
+  geom_point() +
+  scale_color_manual(values = clrs) +  
+  scale_size_manual(values = c(0.5, 1, 1)) +
+  labs(title = "(a) Time point (Mothers)", x = "Log2 fold change", y = "-Log10 P-value") +
+  theme_classic() +
+  ylim(0,30) +
+  xlim(-4,4) +
+    theme(
+    legend.position = "top",
+    plot.title.position = "plot")
+
+ITP_Pup_plot <- ggplot(Allgenes_EndvsStartPup, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
+  geom_point() +
+  scale_color_manual(values = clrs) +  
+  scale_size_manual(values = c(0.5, 1, 1)) +
+  labs(title = "(b) Time point (Pups)", x = "Log2 fold change", y = "-Log10 P-value") +
+  theme_classic() +
+  ylim(0,30) +
+  xlim(-4,4) +
+    theme(
+    legend.position = "top",
+    plot.title.position = "plot")
+
+Interaction_plot <- ggplot(Allgenes_Interaction3, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
+  geom_point() +
+  scale_color_manual(values = clrs) +  
+  scale_size_manual(values = c(0.5, 1, 1)) +
+  labs(title = "(c) Time point & life history stage", x = "Log2 fold change", y = "-Log10 P-value") +
+  theme_classic() +
+  ylim(0,30) +
+  xlim(-4,4) +
+    theme(
+    legend.position = "top",
+    plot.title.position = "plot")
+
+# Combine plots
+Interaction_all <- ggarrange(ITP_MUM_plot + fig_theme + theme(axis.title.x = element_blank()), 
+                     ITP_Pup_plot + fig_theme + theme(axis.title.x = element_blank(),
+                                         axis.title.y = element_blank()), 
+                     Interaction_plot + fig_theme, 
+                     NULL, common.legend = T, legend = "bottom")
+
+ggsave(here::here("Plots","Interaction_all.png"), plot = Interaction_all, width = 7, height = 7, dpi = 600)
+```
 
 
 
 ## Colony and life stage interaction
-
+Framework for differential gene expression analysis using interactions by ALB. 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 # #Simple interaction (limma manual 9.5.2)
 # #Create a design matrix including life history stage and its interaction with colony
 # d_n$samples$colony.lhs <- as.factor(paste(d_n$samples$colony, d_n$samples$life_history_stage, sep = "."))
@@ -1161,8 +1259,10 @@ summary(dt_interaction4)
 ```
 
 # GOterms using clusterProfiler
-
+In this section, we are conducting a gene ontology (GO) enrichment using Clusterprofiler to identify biological processes significantly associated with differentially expressed genes. 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 
@@ -1176,6 +1276,8 @@ invisible(pacman::p_load(dplyr, clusterProfiler, org.Hs.eg.db, enrichplot, ggplo
 ## Call in DEG
 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 #Call up or down regulated genes from differential expression analysis
 file_paths <- list.files(path = "GenesGO", pattern = "^(Upregulated|Downregulated).*\\.csv$", full.names = TRUE)
 
@@ -1196,6 +1298,8 @@ rm(df, file, file_paths, name)
 
 ## Gene ontology: enrichment analysis
 ```{r}
+#| label: load_data
+#| echo: FALSE
 #Go enrichment analysis for up and down regulated genes
 DEG_list <- list(I_TP_MUM_DOWN = Downregulated_EndvsStartMum,
                  I_TP_PUP_DOWN = Downregulated_EndvsStartPup, 
@@ -1234,6 +1338,8 @@ GO_results_list <- lapply(DEG_list, function(df) {
 ## Top 20 enriched GOterms (biological process) 
 ### Time point
 ```{r}
+#| label: load_data
+#| echo: FALSE
 GO_TP_DOWN <- as.data.frame(GO_results_list$TP_DOWN) %>%
   mutate(Regulation = "Downregulated") 
 GO_TP_UP <- as.data.frame(GO_results_list$TP_UP) %>%
@@ -1309,6 +1415,8 @@ ggsave(here::here("Plots","EA_TP.png"), plot = EA_TP, width = 12, height = 7.5, 
 
 ### Life history stage
 ```{r}
+#| label: load_data
+#| echo: FALSE
 GO_LHS_DOWN <- as.data.frame(GO_results_list$LHS_DOWN) %>%
   mutate(Regulation = "Downregulated") 
 GO_LHS_UP <- as.data.frame(GO_results_list$LHS_UP) %>%
@@ -1385,6 +1493,8 @@ ggsave(here::here("Plots","EA_LHS.png"), plot = EA_LHS, width = 12, height = 7.5
 ## Revigo in R
 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 remotes::install_github("ssayols/rrvgo")
 library(rrvgo)
 ```
@@ -1392,6 +1502,8 @@ library(rrvgo)
 ### Similarity matrices
 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 #calculate similarity matrices for all 
 GO_names <- c("TP_DOWN", "TP_UP", "LHS_DOWN", "LHS_UP", "I_TP_PUP_DOWN", "I_TP_PUP_UP", "I_TP_MUM_DOWN", "I_TP_MUM_UP", "I_I_DOWN", "I_I_UP")
 
@@ -1438,6 +1550,8 @@ for (name in GO_names) {
 ## Heatmaps
 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 HP_GO_TP_UP <- heatmapPlot(sim_matrices_GO$TP_UP,
                                   reduced_terms_list_GO$TP_UP,
                                   annotateParent=TRUE,
@@ -1488,6 +1602,8 @@ ggsave(here::here("Plots","HP_GO_LHS.png"), plot = HP_GO_LHS, width = 12, height
 ![Heatmap: GOterms (Life history stage)](Plots/HP_GO_LHS.png)
 ## Scatterplots
 ```{r}
+#| label: load_data
+#| echo: FALSE
 SP_GO_TP_UP <- scatterPlot(sim_matrices_GO$TP_UP, reduced_terms_list_GO$TP_UP) + 
   theme_classic() + 
   xlim(c(-1,1)) + 
@@ -1531,6 +1647,8 @@ ggsave(here::here("Plots","SP_LHS_GO.png"), plot = SP_LHS_GO, width = 8.5, heigh
 # PCA loadings
 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 #Loadings from the PCA 
 loadings <- pca_result$rotation
 
@@ -1650,6 +1768,8 @@ PC1_loadings <- barplot(
 ```
 
 ```{r}
+#| label: load_data
+#| echo: FALSE
 library(dplyr)
 library(tidyr)
 install.packages("viridis")
@@ -1708,7 +1828,8 @@ barplot <- ggplot(top_loadings_pc1_grouped, aes(x = variable, y = loading, fill 
 ```
 
 ```{r}
-
+#| label: load_data
+#| echo: FALSE
 #Immune genes
 #Adaptive
 AIG <- c("CD3D"," CD3E", "CD8A", "CD4", "CD19", "IGHM", "IGHG1", "IL2RA")
