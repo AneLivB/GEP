@@ -134,7 +134,7 @@ legend_theme_outlier <- theme(
     legend.justification = c("left", "top"),  
     legend.background = element_rect(fill = alpha('white', 0.7), color = NA),  
     legend.key.size = unit(0.8, "lines"),
-    text = element_text(family = "Arial", size = 14))
+    text = element_text(family = "Arial", size = 12))
 
 PCA_plots_outlier <- plot_grid(PCA_TP + legend_theme_outlier + theme(axis.title.x = element_blank()), 
                                PCA_LHS + legend_theme_outlier + theme(axis.title.x = element_blank(),
@@ -153,7 +153,7 @@ cpm_mat <- cpm(d_n, log=TRUE)  #we need the log values
 exprs_mat <- cpm_mat
 exprs_t <- t(exprs_mat) #transpose
 pca_result <- prcomp(exprs_t, center = TRUE, scale. = TRUE)
-
+dim(d_n)
 pca_var <- pca_result$sdev^2                  
 pca_var_explained <- pca_var / sum(pca_var)   
 round(pca_var_explained[1:2] * 100, 2)
@@ -228,6 +228,22 @@ PCA_plots <- plot_grid(PCA_TP + legend_theme + theme(axis.title.x = element_blan
 
 ggsave(here::here("Plots","PCA_plots.png"), plot = PCA_plots, dpi = 600)
 rm(PCA_LHS, PCA_TP, PCA_Y, PCA_C)
+
+summary_table <- subset(pc_scores, select = c("ID", "SampleID", "year", "colony", "life_history_stage", "group"))
+colnames(summary_table) <- c("ID", "SampleID", "Season", "Colony", "Life history stage", "Time point")
+rownames(summary_table) <- NULL
+summary_table <- kable(summary_table) %>% kable_styling("striped")
+kableExtra::save_kable(summary_table, file = "table.pdf")
+
+summary_short <- subset(pc_scores, select = c("year", "colony", "life_history_stage", "group"))
+colnames(summary_short) <- c("Season", "Colony", "Life history stage", "Time point")
+names(summary_short) <- make.names(names(summary_short))
+summary_short<- summary_short %>%
+  group_by(across(everything())) %>%
+  summarise(count= n(), .groups = "drop")
+rownames(summary_short) <- NULL
+summary_short <- kable(summary_short) %>% kable_styling("striped")
+kableExtra::save_kable(summary_short, file = "table_short.pdf")
 ```
 
 ![Principle component analysis of processed data](Plots/PCA_plots.png)
@@ -278,10 +294,7 @@ In this section, we will perform differential gene expression analysis to identi
 #| label: load_data
 #| echo: FALSE
 clrs <- c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5", "'Not significant'" = "grey20")
-lfc <- 1 #log fold change of 1 is pretty standard but explore further
-#a doubling in the original scaling is equal to a log2 fold change of 1
-#a quadrupling is equal to a log2 fold change of 2
-lfc_half <- 0.5
+lfc <- 1 
 adj.P.value <- 0.05
 fig_theme <- theme(text = element_text(family = "Arial", size = 14),
                    legend.title = element_blank(),
@@ -302,40 +315,40 @@ BS assessed differential expression per gene between the two time points (start 
 ```{r}
 #| label: load_data
 #| echo: FALSE
-# #-------------- ANALYSIS OF TIME POINT --------------##
-# design <- model.matrix(~ -1 + group, data = d_n$samples) #setting up model contrasts is more straight forward in the absence of an intercept for timepoint
-# contr.matrix <- makeContrasts(
-#  end_vs_start = group2-group1,
-#  levels = colnames(design)) #create matrix for contrasts
-# # Use voom to remove variance dependency on mean, see https://bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html
-# # voom converts raw counts to log-CPM values by automatically extracting library sizes and normalisation factors from d itself.
-# #  If filtering of lowly-expressed genes is insufficient, a drop in variance levels can be observed at the low end of the expression scale due to very small counts.
-# #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-# vobj_tp <- voom(d_n, design, plot=TRUE)
+#-------------- ANALYSIS OF TIME POINT --------------##
+design <- model.matrix(~ -1 + group, data = d_n$samples) #setting up model contrasts is more straight forward in the absence of an intercept for timepoint
+contr.matrix <- makeContrasts(
+ end_vs_start = group2-group1,
+ levels = colnames(design)) #create matrix for contrasts
+# Use voom to remove variance dependency on mean, see https://bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html
+# voom converts raw counts to log-CPM values by automatically extracting library sizes and normalisation factors from d itself.
+#  If filtering of lowly-expressed genes is insufficient, a drop in variance levels can be observed at the low end of the expression scale due to very small counts.
+#voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
+vobj_tp <- voom(d_n, design, plot=TRUE)
 # 
 # # Fit a random effect
-# dupcor_tp <- duplicateCorrelation(vobj_tp, design, block = d_n$samples$ID)
-# dupcor_tp$consensus #the estimated intra individual correlation (0.3115568)
+dupcor_tp <- duplicateCorrelation(vobj_tp, design, block = d_n$samples$ID)
+dupcor_tp$consensus #the estimated intra individual correlation (0.3115568)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
-# vobj = voom(d_n, design, plot=TRUE,
-#            block=d_n$samples$ID, correlation=dupcor_tp$consensus)
-# #update the correlation for the new voom weights
-# dupcor_tp <- duplicateCorrelation(vobj, design, block = d_n$samples$ID)
-# dupcor_tp$consensus #the estimated intra individual correlation (0.3114605)
-# 
+vobj = voom(d_n, design, plot=TRUE,
+            block=d_n$samples$ID, correlation=dupcor_tp$consensus)
+#update the correlation for the new voom weights
+dupcor_tp <- duplicateCorrelation(vobj, design, block = d_n$samples$ID)
+dupcor_tp$consensus #the estimated intra individual correlation (0.3114605)
+# # 
 # #Fit the model
-# analyzing repeated measures data using duplicateCorrelation.
-# The model forces the magnitude of the random effect to be the same across all genes.
-# Estimate linear mixed model with a single variance component
-# Fit the model for each gene
-# But this step uses only the genome-wide average for the random effect
-# vfit_tp <- lmFit(vobj, design, block=d_n$samples$ID, correlation=dupcor_tp$consensus)
-# vfit_tp <- contrasts.fit(vfit_tp, contrasts=contr.matrix)
+# # analyzing repeated measures data using duplicateCorrelation.
+# # The model forces the magnitude of the random effect to be the same across all genes.
+# # Estimate linear mixed model with a single variance component
+# # Fit the model for each gene
+# # But this step uses only the genome-wide average for the random effect
+vfit_tp <- lmFit(vobj, design, block=d_n$samples$ID, correlation=dupcor_tp$consensus)
+vfit_tp <- contrasts.fit(vfit_tp, contrasts=contr.matrix)
 # 
 # Save the model to avoid recomputing everything
 # save vfit_tp
-# saveRDS(vfit_tp, file = here::here("Models","vfit_tp.rds"))
+saveRDS(vfit_tp, file = here::here("Models","vfit_tp.rds"))
 
 #Load vfit_tp
 vfit_tp <- readRDS(here::here("Models","vfit_tp.rds"))
@@ -382,18 +395,21 @@ for (name in names(tp_list)) {
 Allgenes_tp$Significance <- "'Not significant'"
 Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC >= lfc] <- "Upregulated"
 Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC <= -lfc] <- "Downregulated"
+Allgenes_tp
 
 #Plot volcano plot
-tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
+tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(adj.P.Val), color = Significance, size = Significance)) +
+  geom_hline(yintercept = -log10(0.05), col = "gray", linetype = 'dashed') +
+  geom_vline(xintercept = c(-1, 1), col = "gray", linetype = 'dashed') +
   geom_point() +
   scale_color_manual(values = clrs) +  
-  scale_size_manual(values = c(0.5, 1, 1)) +
-  labs(title = "(a) Time point", x = "Log2 fold change", y = "-Log10 P-value") +
+  scale_size_manual(values = c(1, 2, 2)) +
+  labs(title = "(a) Time point", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
   theme_classic() +
-  ylim(0,50) +
-  xlim(-4,4) +
+  #ylim(0,15) +
+  #xlim(-4,4) +
   theme(
-    legend.position = "top",
+    legend.position = "bottom",
     plot.title.position = "plot")
 ```
 
@@ -417,15 +433,17 @@ annotation$TP <- factor(annotation$TP, levels = c("Day 0", "Day 60"))
 matrix_tp <- expression_tp[, order(annotation$TP)]
 annotation_tp <- annotation[order(annotation$TP), , drop = FALSE]
 
+install.packages("ComplexHeatmap")
+
 heatmap_tp <- pheatmap(matrix_tp,
                        scale = "row",  # normalize rows (genes)
                        color = colorRampPalette(c("#9D00FF", "white", "#FFA500"))(100),
                        annotation_colors = ann_colors,
-                       annotation_col = annotation,
+                       annotation_col = annotation_tp,
                        cluster_rows = TRUE,
                        treeheight_row = 0,
                        cluster_cols = FALSE,
-                       gaps_col = cumsum(table(annotation$TP)),
+                       gaps_col = cumsum(table(annotation_tp$TP)),
                        show_rownames = F,
                        show_colnames = FALSE,
                        annotation_legend = FALSE,
@@ -433,9 +451,28 @@ heatmap_tp <- pheatmap(matrix_tp,
                        fontsize = 14,
                        fontsize_col = 7,
                        fontsize_row = 6,
-                       main = "(a) Time point")
+                       main = "(c) Time point")
 
-ggsave(here::here("Plots","heatmap_tp.png"), plot = heatmap_tp, width = 7, height = 2, dpi = 600)
+#ggsave(here::here("Plots","heatmap_tp.png"), plot = heatmap_tp, width = 7, height = 7, dpi = 600)
+
+png("heatmap_tp.png", width=6, height=8, units="in", res=600)
+pheatmap(matrix_tp,
+         scale = "row",
+         color = colorRampPalette(c("#9D00FF", "white", "#FFA500"))(100),
+         annotation_colors = ann_colors,
+         annotation_col = annotation_tp,
+         cluster_rows = TRUE,
+         cluster_cols = FALSE,
+         gaps_col = cumsum(table(annotation_tp$TP)),
+         show_rownames = FALSE,
+         show_colnames = FALSE,
+         annotation_legend = FALSE,
+         legend = FALSE,
+         fontsize = 14,
+         fontsize_col = 7,
+         fontsize_row = 6,
+         main = "(c) Time point")
+dev.off()
 
 ```
 
@@ -447,36 +484,36 @@ Analysis performed by ALB using the framework outlined by BS.
 #| label: load_data
 #| echo: FALSE
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
-# #Create a design matrix
-# design_lhs <- model.matrix(~ -1 + life_history_stage, data = d_n$samples) #model contrasts without intercept is easier
-# colnames(design_lhs) <- gsub("life_history_stage", "", colnames(design_lhs)) #clean group names
+#Create a design matrix
+design_lhs <- model.matrix(~ -1 + life_history_stage, data = d_n$samples) #model contrasts without intercept is easier
+colnames(design_lhs) <- gsub("life_history_stage", "", colnames(design_lhs)) #clean group names
+
+#create matrix for contrasts
+contr.matrix.lhs <- makeContrasts(
+ adultvspup = Mother-Pup,
+ levels = colnames(design_lhs))
+
+#voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
+vobj_lhs <- voom(d_n, design_lhs, plot=TRUE)
 # 
-# #create matrix for contrasts
-# contr.matrix.lhs <- makeContrasts(
-#  adultvspup = Mother-Pup,
-#  levels = colnames(design_lhs))
+# Fit a random effect
+dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
+dupcor_lhs$consensus #the estimated intra individual correlation (0.1362346)
 # 
-# #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-# vobj_lhs <- voom(d_n, design_lhs, plot=TRUE)
-# 
-# # Fit a random effect
-# dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
-# dupcor_lhs$consensus #the estimated intra individual correlation (0.1362346)
-# 
-# vobj_lhs = voom(d_n, design_lhs, plot=TRUE,
-#          block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
-# #update the correlation for the new voom weights
-# dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
-# dupcor_lhs$consensus #the estimated intra individual correlation (0.1362741)
-# #Analyzing repeated measures data using duplicateCorrelation.
-# #The model forces the magnitude of the random effect to be the same across all genes.
-# 
-# 
-# #Estimate linear mixed model with a single variance component
-# vfit_lhs <- lmFit(vobj_lhs, design_lhs, block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
-# vfit_lhs <- contrasts.fit(vfit_lhs, contrasts=contr.matrix.lhs)
-# 
-# #Save the model to avoid recomputing everything
+vobj_lhs = voom(d_n, design_lhs, plot=TRUE,
+         block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
+#update the correlation for the new voom weights
+dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
+dupcor_lhs$consensus #the estimated intra individual correlation (0.1362741)
+#Analyzing repeated measures data using duplicateCorrelation.
+#The model forces the magnitude of the random effect to be the same across all genes.
+
+
+#Estimate linear mixed model with a single variance component
+vfit_lhs <- lmFit(vobj_lhs, design_lhs, block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
+vfit_lhs <- contrasts.fit(vfit_lhs, contrasts=contr.matrix.lhs)
+
+#Save the model to avoid recomputing everything
 # #save vfit_lhs
 # saveRDS(vfit_lhs, file = here::here("Models","vfit_lhs.rds"))
 
@@ -528,16 +565,18 @@ Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$lo
 Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC <= -lfc] <- "Downregulated"
 
 #Plot DEG volcano plot
-lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
+lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(adj.P.Val), color = Significance, size = Significance)) +
+  geom_hline(yintercept = -log10(0.05), col = "gray", linetype = 'dashed') +
+  geom_vline(xintercept = c(-1, 1), col = "gray", linetype = 'dashed') +
   geom_point() +
   scale_color_manual(values = clrs) +  
-  scale_size_manual(values = c(0.5, 1, 1)) +
-  labs(title = "(b) Life history stage", x = "Log2 fold change", y = "-Log10 P-value") +
+  scale_size_manual(values = c(1, 2, 2)) +
+  labs(title = "(b) Life history stage", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
   theme_classic() +
-  #ylim(0,60) +
+  #ylim(0,15) +
   #xlim(-4,4) +
-    theme(
-    legend.position = "top",
+  theme(
+    legend.position = "bottom",
     plot.title.position = "plot")
 ```
 
@@ -577,7 +616,7 @@ heatmap_lhs <- pheatmap(matrix_lhs,
                        fontsize = 14,
                        fontsize_col = 7,
                        fontsize_row = 6,
-                       main = "(b) Life history stage")
+                       main = "(d) Life history stage")
 
 
 ggsave(here::here("Plots","heatmap_lhs.png"), plot = heatmap_lhs, width = 7, height = 7, dpi = 600)
