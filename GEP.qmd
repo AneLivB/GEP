@@ -77,6 +77,7 @@ d_n$samples$pair <- as.factor(d_n$samples$pair)
 Create a PCA plot to identify outliers.
 
 ```{r}
+#| label: PCA_outlier
 #| echo: FALSE
 #| message: false
 #Use PCA to identify outliers. F24_FWB_mum_start_2018B was already removed at an earlier state
@@ -99,7 +100,7 @@ PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage)) 
   stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "(b) Life history stage", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = NULL)
+  labs(title = "(c) Life history stage", x = "PC1 (24 %)", y = "PC2 (12 %)", color = NULL)
 
 #levels(pc_scores$year)
 levels(pc_scores$year) <- c("2019", "2020")
@@ -109,7 +110,7 @@ PCA_Y <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = year)) +
   stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "(c) Season", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = NULL)
+  labs(title = "(b) Season", x = "PC1 (24 %)", y = "PC2 (12 %)", color = NULL)
 
 #levels(pc_scores$group)
 levels(pc_scores$group) <- c("Day 0", "Day 60")
@@ -119,7 +120,7 @@ PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group)) +
   stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "(a) Time point", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = NULL)
+  labs(title = "(d) Time point", x = "PC1 (24 %)", y = "PC2 (12 %)", color = NULL)
 
 PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
   geom_point(size = 2) +
@@ -127,7 +128,7 @@ PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
   stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "(d) Colony", x = "PC1 (24.15%)", y = "PC2 (12.38%)", color = NULL)
+  labs(title = "(a) Colony", x = "PC1 (24 %)", y = "PC2 (12 %)", color = NULL)
 
 legend_theme_outlier <- theme(
     legend.position = c(0.05, 0.95), 
@@ -136,11 +137,11 @@ legend_theme_outlier <- theme(
     legend.key.size = unit(0.8, "lines"),
     text = element_text(family = "Arial", size = 12))
 
-PCA_plots_outlier <- plot_grid(PCA_TP + legend_theme_outlier + theme(axis.title.x = element_blank()), 
-                               PCA_LHS + legend_theme_outlier + theme(axis.title.x = element_blank(),
+PCA_plots_outlier <- plot_grid(PCA_C + legend_theme_outlier + theme(axis.title.x = element_blank()), 
+                               PCA_Y + legend_theme_outlier + theme(axis.title.x = element_blank(),
                                                                       axis.title.y = element_blank()), 
-                               PCA_Y + legend_theme_outlier, 
-                               PCA_C + legend_theme_outlier + theme(axis.title.y = element_blank()), 
+                               PCA_LHS + legend_theme_outlier, 
+                               PCA_TP + legend_theme_outlier + theme(axis.title.y = element_blank()), 
                                ncol = 2)
 ggsave(here::here("Plots","PCA_plots_outlier.png"), plot = PCA_plots_outlier, dpi = 600)
 #The PCA identifies F6_FWB_mum_start_2018B as an outlier
@@ -169,6 +170,7 @@ rm(exprs_mat, exprs_t, cpm_mat)
 The PCA identified **one** outlier, which was removed from the dataset for further analysis.
 
 ```{r}
+#| label: PCA
 #| echo: FALSE
 #| message: false
 #Plot in accordance to LHS and TP
@@ -179,7 +181,7 @@ PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage)) 
   scale_color_manual(values = c("#E69F00", "#56B4E9")) +
   xlim(-200, 200) +
   ylim(-200, 200) +
-  labs(title = "c) Life history stage", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
+  labs(title = "(c) Life history stage", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
 
 #levels(pc_scores$group)
 levels(pc_scores$group) <- c("Day 0", "Day 60")
@@ -190,7 +192,7 @@ PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group)) +
   scale_color_manual(values = c("#E69F00", "#56B4E9")) +
   xlim(-200, 200) +
   ylim(-200, 200) +
-  labs(title = "a) Time point", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
+  labs(title = "(d) Time point", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
 
 #levels(pc_scores$year)
 levels(pc_scores$year) <- c("2019", "2020")
@@ -201,7 +203,7 @@ PCA_Y <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = year)) +
   scale_color_manual(values = c("#E69F00", "#56B4E9")) +
   xlim(-200, 200) +
   ylim(-200, 200) +
-  labs(title = "c) Season", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
+  labs(title = "(b) Season", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
 
 PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
   geom_point(size = 2) +
@@ -210,7 +212,7 @@ PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
   scale_color_manual(values = c("#E69F00", "#56B4E9")) +
   xlim(-200, 200) +
   ylim(-200, 200) +  
-  labs(title = "d) Colony", x = "PC1 (23.12%)", y = "PC2 (13.25%)", color = NULL)
+  labs(title = "(a) Colony", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
 
 legend_theme <- theme(
     legend.position = c(0.95, 0.95), 
@@ -219,15 +221,22 @@ legend_theme <- theme(
     legend.key.size = unit(0.8, "lines"), 
     text = element_text(family = "Arial", size = 12))
 
-PCA_plots <- plot_grid(PCA_TP + legend_theme + theme(axis.title.x = element_blank()),
-                       PCA_LHS + legend_theme + theme(axis.title.x = element_blank(),
+PCA_plots <- plot_grid(PCA_C + legend_theme + theme(axis.title.x = element_blank()),
+                       PCA_Y + legend_theme + theme(axis.title.x = element_blank(),
                                                       axis.title.y = element_blank()), 
-                       PCA_Y + legend_theme, 
-                       PCA_C + legend_theme + theme(axis.title.y = element_blank()),
+                       PCA_LHS + legend_theme, 
+                       PCA_TP + legend_theme + theme(axis.title.y = element_blank()),
                        ncol = 2)
 
 ggsave(here::here("Plots","PCA_plots.png"), plot = PCA_plots, dpi = 600)
 rm(PCA_LHS, PCA_TP, PCA_Y, PCA_C)
+```
+
+![Principle component analysis of processed data](Plots/PCA_plots.png)
+```{r}
+#| label: Nice_tables
+#| echo: FALSE
+#| warning: false
 
 # summary_table <- subset(pc_scores, select = c("ID", "SampleID", "year", "colony", "life_history_stage", "group"))
 # colnames(summary_table) <- c("ID", "SampleID", "Season", "Colony", "Life history stage", "Time point")
@@ -235,18 +244,18 @@ rm(PCA_LHS, PCA_TP, PCA_Y, PCA_C)
 # summary_table <- kable(summary_table) %>% kable_styling("striped")
 # kableExtra::save_kable(summary_table, file = "table.pdf")
 # 
-# summary_short <- subset(pc_scores, select = c("year", "colony", "life_history_stage", "group"))
-# colnames(summary_short) <- c("Season", "Colony", "Life history stage", "Time point")
-# names(summary_short) <- make.names(names(summary_short))
-# summary_short<- summary_short %>%
-#   group_by(across(everything())) %>%
-#   summarise(count= n(), .groups = "drop")
-# rownames(summary_short) <- NULL
-# summary_short <- kable(summary_short) %>% kable_styling("striped")
-# kableExtra::save_kable(summary_short, file = "table_short.pdf")
+summary_short <- subset(pc_scores, select = c("year", "colony", "life_history_stage", "group"))
+colnames(summary_short) <- c("Season", "Colony", "Life history stage", "Time point")
+names(summary_short) <- make.names(names(summary_short))
+summary_short<- summary_short %>%
+  group_by(across(everything())) %>%
+  summarise(count= n(), .groups = "drop")
+rownames(summary_short) <- NULL
+summary_short <- kable(summary_short) %>% kable_styling("striped")
+kableExtra::save_kable(summary_short, file = "table_short.pdf")
+summary_short
 ```
 
-![Principle component analysis of processed data](Plots/PCA_plots.png)
 
 # Visualize data
 
@@ -291,9 +300,9 @@ rm(counts_per_million, density_plot, df_long, df_melted, log_counts_per_million,
 # Differential gene expression analysis
 In this section, we will perform differential gene expression analysis to identify genes that are differentially expressed between the four main contasts: Time point, Life hisotry stage, Colony and Season. 
 ```{r}
-#| label: load_data
+#| label: color_scheme
 #| echo: FALSE
-clrs <- c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5", "'Not significant'" = "grey20")
+clrs <- c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5", "Not significant" = "grey20")
 lfc <- 1 
 adj.P.value <- 0.05
 fig_theme <- theme(text = element_text(family = "Arial", size = 12),
@@ -313,7 +322,7 @@ ann_colors <- list(
 BS assessed differential expression per gene between the two time points (start vs end).
 
 ```{r}
-#| label: load_data
+#| label: DEG_Time_point
 #| echo: FALSE
 #-------------- ANALYSIS OF TIME POINT --------------##
 design <- model.matrix(~ -1 + group, data = d_n$samples) #setting up model contrasts is more straight forward in the absence of an intercept for timepoint
@@ -392,7 +401,7 @@ for (name in names(tp_list)) {
 }
 
 #Significance
-Allgenes_tp$Significance <- "'Not significant'"
+Allgenes_tp$Significance <- "Not significant"
 Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC >= lfc] <- "Upregulated"
 Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC <= -lfc] <- "Downregulated"
 Allgenes_tp
@@ -404,7 +413,7 @@ tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(adj.P.Val), color = Sig
   geom_point() +
   scale_color_manual(values = clrs) +  
   scale_size_manual(values = c(0.5, 1, 1)) +
-  labs(title = "(a) Time point", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
+  labs(title = "(b) Time point", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
   theme_classic() +
   ylim(0,50) +
   xlim(-4.1,4.1) +
@@ -416,7 +425,7 @@ tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(adj.P.Val), color = Sig
 ### Heatmap
 Creating a heatmap to visualise the differentially expressed genes between the two start points. 
 ```{r}
-#| label: load_data
+#| label: Heatmap_tp
 #| echo: FALSE
 #Create heatmap for differentially expressed genes between time points
 DEG_tp <- rownames(Filteredgenes_tp)
@@ -459,7 +468,7 @@ ggsave(here::here("Plots","heatmap_tp.png"), plot = heatmap_tp, width = 3.5, hei
 ## Life stages
 Analysis performed by ALB using the framework outlined by BS. 
 ```{r}
-#| label: load_data
+#| label: DEG_LHS
 #| echo: FALSE
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 #Create a design matrix
@@ -538,7 +547,7 @@ for (name in names(lhs_list)) {
 
 
 #Significance
-Allgenes_lhs$Significance <- "'Not significant'"
+Allgenes_lhs$Significance <- "Not significant"
 Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC >= lfc] <- "Upregulated"
 Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC <= -lfc] <- "Downregulated"
 
@@ -549,7 +558,7 @@ lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(adj.P.Val), color = S
   geom_point() +
   scale_color_manual(values = clrs) +  
   scale_size_manual(values = c(0.5, 1, 1)) +
-  labs(title = "(b) Life history stage", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
+  labs(title = "(a) Life history stage", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
   theme_classic() +
   ylim(0,50) +
   xlim(-4.1,4.1) +
@@ -561,7 +570,7 @@ lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(adj.P.Val), color = S
 ### Heatmap
 Creating a heatmap to visualise the differentially expressed genes between the two life history stages.
 ```{r}
-#| label: load_data
+#| label: heatmap_lhs
 #| echo: FALSE
 #Create heatmap for differentially expressed genes between time points
 DEG_lhs <- rownames(Filteredgenes_lhs)
@@ -605,7 +614,7 @@ ggsave(here::here("Plots","heatmap_lhs.png"), plot = heatmap_lhs, width = 3.5, h
 ## Colony
 Analysis performed by ALB using the framework outlined by BS. 
 ```{r}
-#| label: load_data
+#| label: DEG_colony
 #| echo: FALSE
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 # #Create a design matrix
@@ -642,59 +651,59 @@ Analysis performed by ALB using the framework outlined by BS.
 #saveRDS(vfit_c, file = here::here("Models","vfit_c.rds"))
 #
 #Load vfit_c
-vfit_c <- readRDS(here::here("Models","vfit_c.rds"))
-
-# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
-efit_c <- eBayes(vfit_c)
-topTable(efit_c, n=20)
-plotSA(efit_c, main="Final model: Mean-variance trend")
-plotMD(efit_c)
-abline(h=0,col="darkgrey")
-
-#adjusted p-value cutoff that is set at 5% by default.
-efit_c$F
-#head(efit_c$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
-#head(efit_c$p.value) #same
-summary(decideTests(efit_c, adjust.method="fdr"))
-#set log-fold-changes (log-FCs) to be above a minimum value. The treat method (McCarthy and Smyth 2009) used to calculate p-values from empirical Bayes moderated t-statistics with a minimum log-FC requirement. 
-#no need to use the ebayes output for this
-
-#Positive values means the gene is more expressed
-tfit_c <- treat(vfit_c, lfc=lfc) 
-topTreat(tfit_c)
-nrow(tfit_c)
-dt_c <- decideTests(tfit_c, adjust.method="fdr")
-summary(dt_c) 
-
-#Test for significance
-Allgenes_c <- as.data.frame(topTreat(tfit_c, n=nrow(tfit_c)))
-Filteredgenes_c <- subset(Allgenes_c, abs(logFC) >= lfc & adj.P.Val, 2 < adj.P.value)
-nrow(subset(Filteredgenes_c, Filteredgenes_c$logFC > 0))
-nrow(subset(Filteredgenes_c, Filteredgenes_c$logFC < 0))
-
-#Significance
-Allgenes_c$Significance <- "'Not significant'"
-Allgenes_c$Significance[Allgenes_c$adj.P.Val < adj.P.value & Allgenes_c$logFC >= lfc] <- "Upregulated"
-Allgenes_c$Significance[Allgenes_c$adj.P.Val < adj.P.value & Allgenes_c$logFC <= -lfc] <- "Downregulated"
-
-#Plot DEG Volcano plot
-c_plot <- ggplot(Allgenes_c, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
-  geom_point() +
-  scale_color_manual(values = clrs) +  
-  scale_size_manual(values = 0.5) +
-  labs(title = "(d) Colony", x = "Log2 fold change", y = "-Log10 P-value") +
-  theme_classic() +
-  ylim(0,50) +
-  xlim(-4,4) +
-    theme(
-    legend.position = "top",
-    plot.title.position = "plot")
+# vfit_c <- readRDS(here::here("Models","vfit_c.rds"))
+# 
+# # Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
+# efit_c <- eBayes(vfit_c)
+# topTable(efit_c, n=20)
+# plotSA(efit_c, main="Final model: Mean-variance trend")
+# plotMD(efit_c)
+# abline(h=0,col="darkgrey")
+# 
+# #adjusted p-value cutoff that is set at 5% by default.
+# efit_c$F
+# #head(efit_c$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
+# #head(efit_c$p.value) #same
+# summary(decideTests(efit_c, adjust.method="fdr"))
+# #set log-fold-changes (log-FCs) to be above a minimum value. The treat method (McCarthy and Smyth 2009) used to calculate p-values from empirical Bayes moderated t-statistics with a minimum log-FC requirement. 
+# #no need to use the ebayes output for this
+# 
+# #Positive values means the gene is more expressed
+# tfit_c <- treat(vfit_c, lfc=lfc) 
+# topTreat(tfit_c)
+# nrow(tfit_c)
+# dt_c <- decideTests(tfit_c, adjust.method="fdr")
+# summary(dt_c) 
+# 
+# #Test for significance
+# Allgenes_c <- as.data.frame(topTreat(tfit_c, n=nrow(tfit_c)))
+# Filteredgenes_c <- subset(Allgenes_c, abs(logFC) >= lfc & adj.P.Val, 2 < adj.P.value)
+# nrow(subset(Filteredgenes_c, Filteredgenes_c$logFC > 0))
+# nrow(subset(Filteredgenes_c, Filteredgenes_c$logFC < 0))
+# 
+# #Significance
+# Allgenes_c$Significance <- "'Not significant'"
+# Allgenes_c$Significance[Allgenes_c$adj.P.Val < adj.P.value & Allgenes_c$logFC >= lfc] <- "Upregulated"
+# Allgenes_c$Significance[Allgenes_c$adj.P.Val < adj.P.value & Allgenes_c$logFC <= -lfc] <- "Downregulated"
+# 
+# #Plot DEG Volcano plot
+# c_plot <- ggplot(Allgenes_c, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
+#   geom_point() +
+#   scale_color_manual(values = clrs) +  
+#   scale_size_manual(values = 0.5) +
+#   labs(title = "(d) Colony", x = "Log2 fold change", y = "-Log10 P-value") +
+#   theme_classic() +
+#   ylim(0,50) +
+#   xlim(-4,4) +
+#     theme(
+#     legend.position = "top",
+#     plot.title.position = "plot")
 ```
 
 ## Season
 Analysis performed by ALB using the framework outlined by BS. 
 ```{r}
-#| label: load_data
+#| label: DEG_season
 #| echo: FALSE
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 # #Create a design matrix
@@ -729,561 +738,78 @@ Analysis performed by ALB using the framework outlined by BS.
 # #Save the model to avoid recomputing everything
 # saveRDS(vfit_y, file = here::here("Models","vfit_y.rds"))
 #
-#Load vfit_y
-vfit_y <- readRDS(here::here("Models","vfit_y.rds"))
-#ebayes model
-efit_y <- eBayes(vfit_y)
-topTable(efit_y, n=20)
-plotSA(efit_y, main="Final model: Mean-variance trend")
-plotMD(efit_y)
-abline(h=0,col="darkgrey")
-
-#adjusted p-value cutoff that is set at 5% by default.
-efit_y$F
-#head(efit_y$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
-#head(efit_y$p.value) #same
-summary(decideTests(efit_y, adjust.method="fdr"))
-#set lfc 
-tfit_y <- treat(vfit_y, lfc=lfc) 
-topTreat(tfit_y)
-nrow(tfit_y)
-dt_y <- decideTests(tfit_y, adjust.method="fdr")
-summary(dt_y) 
-
-#Test for significance
-Allgenes_y <- as.data.frame(topTreat(tfit_y, n=nrow(tfit_y)))
-Filteredgenes_y <- subset(Allgenes_y, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
-nrow(subset(Filteredgenes_y, Filteredgenes_y$logFC > 0))
-nrow(subset(Filteredgenes_y, Filteredgenes_y$logFC < 0))
-
-#Plot the outcome
-Allgenes_y$Significance <- "'Not significant'"
-Allgenes_y$Significance[Allgenes_y$adj.P.Val < adj.P.value & Allgenes_y$logFC >= lfc] <- "Upregulated"
-Allgenes_y$Significance[Allgenes_y$adj.P.Val < adj.P.value & Allgenes_y$logFC <= -lfc] <- "Downregulated"
-
-#Plot DEG
-y_plot <- ggplot(Allgenes_y, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
-  geom_point() +
-  scale_color_manual(values = clrs) +  
-  scale_size_manual(values = 0.5) +
-  labs(title = "(c) Season", x = "Log2 fold change", y = "-Log10 P-value") +
-  theme_classic() +
-  ylim(0,50) +
-  xlim(-4,4) +
-    theme(
-    legend.position = "top",
-    plot.title.position = "plot")
+# #Load vfit_y
+# vfit_y <- readRDS(here::here("Models","vfit_y.rds"))
+# #ebayes model
+# efit_y <- eBayes(vfit_y)
+# topTable(efit_y, n=20)
+# plotSA(efit_y, main="Final model: Mean-variance trend")
+# plotMD(efit_y)
+# abline(h=0,col="darkgrey")
+# 
+# #adjusted p-value cutoff that is set at 5% by default.
+# efit_y$F
+# #head(efit_y$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
+# #head(efit_y$p.value) #same
+# summary(decideTests(efit_y, adjust.method="fdr"))
+# #set lfc 
+# tfit_y <- treat(vfit_y, lfc=lfc) 
+# topTreat(tfit_y)
+# nrow(tfit_y)
+# dt_y <- decideTests(tfit_y, adjust.method="fdr")
+# summary(dt_y) 
+# 
+# #Test for significance
+# Allgenes_y <- as.data.frame(topTreat(tfit_y, n=nrow(tfit_y)))
+# Filteredgenes_y <- subset(Allgenes_y, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
+# nrow(subset(Filteredgenes_y, Filteredgenes_y$logFC > 0))
+# nrow(subset(Filteredgenes_y, Filteredgenes_y$logFC < 0))
+# 
+# #Plot the outcome
+# Allgenes_y$Significance <- "'Not significant'"
+# Allgenes_y$Significance[Allgenes_y$adj.P.Val < adj.P.value & Allgenes_y$logFC >= lfc] <- "Upregulated"
+# Allgenes_y$Significance[Allgenes_y$adj.P.Val < adj.P.value & Allgenes_y$logFC <= -lfc] <- "Downregulated"
+# 
+# #Plot DEG
+# y_plot <- ggplot(Allgenes_y, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
+#   geom_point() +
+#   scale_color_manual(values = clrs) +  
+#   scale_size_manual(values = 0.5) +
+#   labs(title = "(c) Season", x = "Log2 fold change", y = "-Log10 P-value") +
+#   theme_classic() +
+#   ylim(0,50) +
+#   xlim(-4,4) +
+#     theme(
+#     legend.position = "top",
+#     plot.title.position = "plot")
 ```
 
 ```{r}
 #Bind plots together
-# Apply theme to make similar
-y_plot <- y_plot + fig_theme
-lhs_plot <- lhs_plot + fig_theme + theme(axis.title.x = element_blank(),
-                                         axis.title.y = element_blank())
-c_plot <- c_plot + fig_theme + theme(axis.title.y = element_blank())
-tp_plot <- tp_plot + fig_theme + theme(axis.title.x = element_blank())
-
-# Combine plots
-DEG_all <- ggarrange(tp_plot, lhs_plot, y_plot, c_plot, common.legend = T, legend = "bottom")
-
-ggsave(here::here("Plots","DEG_all.png"), plot = DEG_all, width = 7, height = 7, dpi = 600)
+# # Apply theme to make similar
+# y_plot <- y_plot + fig_theme
+# lhs_plot <- lhs_plot + fig_theme + theme(axis.title.x = element_blank(),
+#                                          axis.title.y = element_blank())
+# c_plot <- c_plot + fig_theme + theme(axis.title.y = element_blank())
+# tp_plot <- tp_plot + fig_theme + theme(axis.title.x = element_blank())
+# 
+# # Combine plots
+# DEG_all <- ggarrange(tp_plot, lhs_plot, y_plot, c_plot, common.legend = T, legend = "bottom")
+# 
+# ggsave(here::here("Plots","DEG_all.png"), plot = DEG_all, width = 7, height = 7, dpi = 600)
 
 #Plot for only time point and life history stage
-
-DEG_TPLHS <- ggarrange(tp_plot + fig_theme, lhs_plot + fig_theme, common.legend = T, legend = "bottom")
+DEG_TPLHS <- ggarrange(lhs_plot + fig_theme, tp_plot + fig_theme + theme(axis.title.y = element_blank()), common.legend = T, legend = "bottom", widths = c(1, 0.95))
 ggsave(here::here("Plots","DEG_TPLHS.png"), plot = DEG_TPLHS, width = 7, height = 3.5, dpi = 600)
 ```
 
-![Differential gene expression analysis](Plots/DEG_all.png)
+![Differential gene expression analysis](Plots/DEG_TPLHS.png)
 
-# Interactions
-In this section, we perform a differential gene expression analysis between biologically relevant interactions between the main contrasts. 
-## Year and life history stage interaction
-Framework for differential gene expression analysis using interactions by ALB. 
-```{r}
-#| label: load_data
-#| echo: FALSE
-# #Simple interaction (limma manual 9.5.2)
-# #Create a design matrix including life history stage and its interaction with year
-# d_n$samples$y.lhs <- as.factor(paste(d_n$samples$year, d_n$samples$life_history_stage, sep = "."))
-# design_interaction <- model.matrix(~ 0+y.lhs, data = d_n$samples)  # No intercept
-# #Clean column names
-# colnames(design_interaction) <- c("Season1.mum", "Season1.pup", "Season2.mum", "Season2.pup")
-# 
-# # #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-# vobj_interaction <- voom(d_n, design_interaction, plot=TRUE)
-# 
-# #Fit a random effect
-# dupcor_interaction <- duplicateCorrelation(vobj_interaction, design_interaction, block = d_n$samples$ID)
-# # #dupcor_interaction$consensus #the estimated intra individual correlation (0.09626666)
-# 
-# vobj_interaction = voom(d_n, design_interaction, plot=TRUE, 
-#                         block=d_n$samples$ID, correlation=dupcor_interaction$consensus)
-# # #update the correlation for the new voom weights
-# dupcor_interaction <- duplicateCorrelation(vobj_interaction, design_interaction, block = d_n$samples$ID)
-# # #dupcor_interaction$consensus #the estimated intra individual correlation (0.09627793)
-# 
-# #Estimate linear mixed model with a single variance component
-# vfit_interaction <- lmFit(vobj_interaction, design_interaction, block=d_n$samples$ID, correlation=dupcor_interaction$consensus)
-# 
-# #Fit the contrasts we are interested in
-# cont.matrix.interaction <- makeContrasts(
-#   SeasonalAdult = Season1.mum - Season2.mum, #which genes in adults are DE among seasons
-#   SeasonalPup = Season1.pup - Season2.pup,  #which genes in pups are DE among seasons
-#   Interaction = (Season1.mum - Season1.pup)-(Season2.mum - Season2.pup), #which genes respond differently in pups compared to adults 
-#   levels = colnames(design_interaction)
-# )
-# 
-# vfit_interaction <- contrasts.fit(vfit_interaction, contrasts=cont.matrix.interaction)
-#
-# #Save the model to avoid recomputing everything
-# saveRDS(vfit_interaction, file = here::here("Models","vfit_interaction.rds"))
-#
-#Load vfit_interaction
-vfit_interaction <- readRDS(here::here("Models","vfit_interaction.rds"))
-
-# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
-efit_interaction <- eBayes(vfit_interaction)
-topTable(efit_interaction, n=20)
-plotSA(efit_interaction, main="Final model: Mean-variance trend")
-plotMD(efit_interaction)
-abline(h=0,col="darkgrey")
-
-#adjusted p-value cutoff that is set at 5% by default.
-efit_interaction$F
-#head(efit_y$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
-#head(efit_y$p.value) #same
-summary(decideTests(efit_interaction, adjust.method="fdr"))
-
-tfit_interaction <- treat(vfit_interaction, lfc=lfc) 
-topTreat(tfit_interaction)
-nrow(tfit_interaction)
-dt_interaction <- decideTests(tfit_interaction, adjust.method="fdr")
-summary(dt_interaction) 
-```
-
-## Year and colony interaction
-Framework for differential gene expression analysis using interactions by ALB. 
-```{r}
-#| label: load_data
-#| echo: FALSE
-# #Simple interaction (limma manual 9.5.2)
-# #Create a design matrix including life history stage and its interaction with colony
-# d_n$samples$y.colony <- as.factor(paste(d_n$samples$year, d_n$samples$colony, sep = "."))
-# design_interaction2 <- model.matrix(~ 0+y.colony, data = d_n$samples)  # No intercept
-# #Clean column names
-# colnames(design_interaction2) <- c("Season1.FWB", "Season1.SSB", "Season2.FWB", "Season2.SSB")
-# 
-# # #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-# vobj_interaction2 <- voom(d_n, design_interaction2, plot=TRUE)
-# 
-# #Fit a random effect
-# dupcor_interaction2 <- duplicateCorrelation(vobj_interaction2, design_interaction2, block = d_n$samples$ID)
-# # #dupcor_interaction$consensus #the estimated intra individual correlation (0.09626666)
-# 
-# vobj_interaction2 = voom(d_n, design_interaction2, plot=TRUE, 
-#                         block=d_n$samples$ID, correlation=dupcor_interaction2$consensus)
-# # #update the correlation for the new voom weights
-# dupcor_interaction2 <- duplicateCorrelation(vobj_interaction2, design_interaction2, block = d_n$samples$ID)
-# # #dupcor_interaction$consensus #the estimated intra individual correlation (0.09627793)
-# 
-# #Estimate linear mixed model with a single variance component
-# vfit_interaction2 <- lmFit(vobj_interaction2, design_interaction2, block=d_n$samples$ID, correlation=dupcor_interaction2$consensus)
-# 
-# #Fit the contrasts we are interested in
-# cont.matrix.interaction2 <- makeContrasts(
-#   FWBvsSSBseason1 = Season1.FWB - Season1.SSB, #which genes in season 1 are DE among colonies
-#   FWBvsSSBseason2 = Season2.FWB - Season2.SSB, #which genes in season 2 are DE among colonies
-#   Interaction = (Season1.FWB - Season1.SSB)-(Season2.FWB - Season2.SSB), #which genes respond differently in SSB compared to FWB
-#   levels = colnames(design_interaction2)
-# )
-# 
-# vfit_interaction2 <- contrasts.fit(vfit_interaction2, contrasts=cont.matrix.interaction2)
-# 
-# #Save the model to avoid recomputing everything
-# saveRDS(vfit_interaction2, file = here::here("Models","vfit_interaction2.rds"))
-
-#Load vfit_interaction
-vfit_interaction2 <- readRDS(here::here("Models","vfit_interaction2.rds"))
-# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
-efit_interaction2 <- eBayes(vfit_interaction2)
-topTable(efit_interaction2, n=20)
-plotSA(efit_interaction2, main="Final model: Mean-variance trend")
-plotMD(efit_interaction2)
-abline(h=0,col="darkgrey")
-
-#adjusted p-value cutoff that is set at 5% by default.
-efit_interaction2$F
-#head(efit_y$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
-#head(efit_y$p.value) #same
-summary(decideTests(efit_interaction2, adjust.method="fdr"))
-
-tfit_interaction2 <- treat(vfit_interaction2, lfc=lfc) 
-topTreat(tfit_interaction2)
-nrow(tfit_interaction2)
-dt_interaction2 <- decideTests(tfit_interaction2, adjust.method="fdr")
-summary(dt_interaction2) 
-```
-
-## Time point and life stage interaction
-Framework for differential gene expression analysis using interactions by ALB. 
-```{r}
-#| label: load_data
-#| echo: FALSE
-# #Simple interaction (limma manual 9.5.2)
-# #Create a design matrix including life history stage and its interaction with colony
-# d_n$samples$tp.lhs <- as.factor(paste(d_n$samples$group, d_n$samples$life_history_stage, sep = "."))
-# design_interaction3 <- model.matrix(~ 0+tp.lhs, data = d_n$samples)  # No intercept
-# #Clean column names
-# colnames(design_interaction3) <- c("Start.Mum", "Start.Pup", "End.Mum", "End.Pup")
-# 
-# # #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-# vobj_interaction3 <- voom(d_n, design_interaction3, plot=TRUE)
-# 
-# #Fit a random effect
-# dupcor_interaction3 <- duplicateCorrelation(vobj_interaction3, design_interaction3, block = d_n$samples$ID)
-# dupcor_interaction3$consensus #the estimated intra individual correlation (0.2734322)
-# 
-# vobj_interaction3 = voom(d_n, design_interaction3, plot=TRUE, 
-#                         block=d_n$samples$ID, correlation=dupcor_interaction3$consensus)
-# # #update the correlation for the new voom weights
-# dupcor_interaction3 <- duplicateCorrelation(vobj_interaction3, design_interaction3, block = d_n$samples$ID)
-# dupcor_interaction3$consensus #the estimated intra individual correlation (0.2733877)
-# 
-# #Estimate linear mixed model with a single variance component
-# vfit_interaction3 <- lmFit(vobj_interaction3, design_interaction3, block=d_n$samples$ID, correlation=dupcor_interaction3$consensus)
-# 
-# #Fit the contrasts we are interested in
-# cont.matrix.interaction3 <- makeContrasts(
-#   EndvsStartMum = End.Mum - Start.Mum, #which genes in mothers are DE among tp
-#   EndvsStartPup = End.Pup - Start.Pup,  #which genes in pups are DE among tp
-#   Interaction = (End.Mum - End.Pup)-(Start.Mum - Start.Pup), #which genes respond differently over time in mums compared to pups
-#   levels = colnames(design_interaction3)
-# )
-# 
-# vfit_interaction3 <- contrasts.fit(vfit_interaction3, contrasts=cont.matrix.interaction3)
-# 
-# #Save the model to avoid recomputing everything
-# saveRDS(vfit_interaction3, file = here::here("Models","vfit_interaction3.rds"))
-
-#Load vfit_interaction
-vfit_interaction3 <- readRDS(here::here("Models","vfit_interaction3.rds"))
-# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
-efit_interaction3 <- eBayes(vfit_interaction3)
-topTable(efit_interaction3, n=20)
-plotSA(efit_interaction3, main="Final model: Mean-variance trend")
-plotMD(efit_interaction3)
-abline(h=0,col="darkgrey")
-
-#adjusted p-value cutoff that is set at 5% by default.
-efit_interaction3$F
-#head(efit_interaction3$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
-#head(efit_interaction3$p.value) #same (not the same?)
-summary(decideTests(efit_interaction3, adjust.method="fdr"))
-
-tfit_interaction3 <- treat(vfit_interaction3, lfc=lfc) 
-topTreat(tfit_interaction3)
-topTreat(tfit_interaction3, coef = "Interaction") #specific for the interaction
-nrow(tfit_interaction3)
-dt_interaction3 <- decideTests(tfit_interaction3, adjust.method="fdr")
-summary(dt_interaction3) 
-
-#Test for significance
-#Extract significant genes for each contrast
-Allgenes_EndvsStartMum <- as.data.frame(topTreat(tfit_interaction3, coef = "EndvsStartMum", n = nrow(tfit_interaction3)))
-Allgenes_EndvsStartPup <- as.data.frame(topTreat(tfit_interaction3, coef = "EndvsStartPup", n = nrow(tfit_interaction3)))
-Allgenes_Interaction3 <- as.data.frame(topTreat(tfit_interaction3, coef = "Interaction", n = nrow(tfit_interaction3)))
-#Filtered
-Filtered_EndvsStartMum <- subset(Allgenes_EndvsStartMum, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
-Filtered_EndvsStartPup <- subset(Allgenes_EndvsStartPup, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
-Filtered_Interaction3 <- subset(Allgenes_Interaction3, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
-
-Upregulated_EndvsStartMum <- subset(Filtered_EndvsStartMum, logFC > 0)
-Downregulated_EndvsStartMum <- subset(Filtered_EndvsStartMum, logFC < 0)
-
-Upregulated_EndvsStartPup <- subset(Filtered_EndvsStartPup, logFC > 0)
-Downregulated_EndvsStartPup <- subset(Filtered_EndvsStartPup, logFC < 0)
-
-Upregulated_Interaction3 <- subset(Filtered_Interaction3, logFC > 0)
-Downregulated_Interaction3 <- subset(Filtered_Interaction3, logFC < 0)
-
-# Create a list to save the up and down regulated genes and the df containing all genes evaluated for GO analysis
-interaction3_list <- list(All_Interaction3 = Allgenes_Interaction3, 
-                          Upregulated_interaction3 = Upregulated_Interaction3, 
-                          Downregulated_Interaction3 = Downregulated_Interaction3, 
-                          Upregulated_EndvsStartPup = Upregulated_EndvsStartPup,
-                          Downregulated_EndvsStartPup = Downregulated_EndvsStartPup,
-                          Upregulated_EndvsStartMum = Upregulated_EndvsStartMum,
-                          Downregulated_EndvsStartMum = Downregulated_EndvsStartMum)
-
-# Loop through and save each data frame using `here()`
-for (name in names(interaction3_list)) {
-  write.csv(interaction3_list[[name]], file = here::here("GenesGO", paste0(name, ".csv")), row.names = TRUE)
-}
-
-#Gene check
-#Names <- c("kiaa1522", "fos", "abcc8", "dppa4", "ddit4", "ildr2", "sipa1l2", "arnt2", "crybg2", "gucy2c", "mast4", "pitpnm3", "slc4a8", "tmem150c", "aunip", "chrm3", "mybl1", "kctd19", "ciart")
-#Allgenes_EndvsStartMum[Names,]
-#Allgenes_EndvsStartPup[Names,]
-#Allgenes_Interaction3[Names,]
-```
-### Heatmap
-Creating a heatmap to visualise the differentially expressed genes in the interaction between life history stage and time point. 
-```{r}
-#| label: load_data
-#| echo: FALSE
-#Create heatmaps for differentially expressed genes in each contrast
-DEG_EndvsStartMum <- rownames(Filtered_EndvsStartMum)
-DEG_EndvsStartPup <- rownames(Filtered_EndvsStartPup)
-DEG_Interaction3 <- rownames(Filtered_Interaction3)
-#Extract the expression values 
-expression_EndvsStartMum <- vobj_interaction3$E[DEG_EndvsStartMum, ]
-expression_EndvsStartPup <- vobj_interaction3$E[DEG_EndvsStartPup, ]
-expression_Interaction3 <- vobj_interaction3$E[DEG_Interaction3, ]
-
-# EndvsStartMum 
-#get labels 
-annotation_EndvsStartMum <- data.frame(TP = as.factor(d_n$samples$group))
-rownames(annotation_EndvsStartMum) <- d_n$samples$Sample
-annotation_EndvsStartMum$TP <- ifelse(annotation_EndvsStartMum$TP == 1, "Day 0", "Day 60")
-annotation_EndvsStartMum$TP <- factor(annotation_EndvsStartMum$TP, levels = c("Day 0", "Day 60"))
-
-#order the expression values
-matrix_EndvsStartMum <- expression_EndvsStartMum[, order(annotation_EndvsStartMum$TP)]
-annotation_EndvsStartMum <- annotation_EndvsStartMum[order(annotation_EndvsStartMum$TP), , drop = FALSE]
-
-# EndvsStartPup 
-#get labels 
-annotation_EndvsStartPup <- data.frame(TP = as.factor(d_n$samples$group))
-rownames(annotation_EndvsStartPup) <- d_n$samples$Sample
-annotation_EndvsStartPup$TP <- ifelse(annotation_EndvsStartPup$TP == 1, "Day 0", "Day 60")
-annotation_EndvsStartPup$TP <- factor(annotation_EndvsStartPup$TP, levels = c("Day 0", "Day 60"))
-
-#order the expression values
-matrix_EndvsStartPup <- expression_EndvsStartPup[, order(annotation_EndvsStartPup$TP)]
-annotation_EndvsStartPup <- annotation_EndvsStartPup[order(annotation_EndvsStartPup$TP), , drop = FALSE]
-
-# Interaction
-annotation_interaction <- data.frame(TP = as.factor(d_n$samples$group),
-                                       LHS = as.factor(d_n$samples$life_history_stage))
-rownames(annotation_interaction) <- d_n$samples$Sample
-annotation_interaction$TP <- ifelse(annotation_interaction$TP == 1, "Day 0", "Day 60")
-annotation_interaction$TP <- factor(annotation_interaction$TP, levels = c("Day 0", "Day 60"))
-annotation_interaction$LHS <- factor(annotation_interaction$LHS, levels = c("Mother", "Pup"))
-annotation_interaction$Group <- interaction(annotation_interaction$LHS, annotation_interaction$TP, sep = "_")
-annotation_interaction$Group <- factor(annotation_interaction$Group, levels = c("Mother_Day 0", "Mother_Day 60", "Pup_Day 0", "Pup_Day 60"))
-
-#order the expression values
-matrix_interaction <- expression_Interaction3[, order(annotation_interaction$Group)]
-annotation_interaction <- annotation_interaction[order(annotation_interaction$Group), , drop = FALSE]
-gaps <- cumsum(table(annotation_interaction$Group))
-#Drop the group column
-annotation_interaction$Group <- NULL 
-
-#Heatmaps
-heatmap_EndvsStartMum <- pheatmap(matrix_EndvsStartMum,
-                       scale = "row",  # normalize rows (genes)
-                       color = colorRampPalette(c("#9D00FF", "white", "#FFA500"))(100),
-                       annotation_col = annotation_EndvsStartMum,
-                       annotation_colors = ann_colors,
-                       cluster_rows = TRUE,
-                       treeheight_row = 0,
-                       cluster_cols = FALSE,
-                       gaps_col = cumsum(table(annotation_EndvsStartMum$TP)),
-                       show_rownames = F,
-                       show_colnames = F,
-                       annotation_legend = FALSE,
-                       legend = F,
-                       fontsize = 14,
-                       fontsize_col = 7,
-                       fontsize_row = 6,
-                       main = "(a) Interaction: Time Point (Mothers)")
-
-heatmap_EndvsStartPup <- pheatmap(matrix_EndvsStartPup,
-                       scale = "row",  # normalize rows (genes)
-                       color = colorRampPalette(c("#9D00FF", "white", "#FFA500"))(100),
-                       annotation_col = annotation_EndvsStartPup,
-                       annotation_colors = ann_colors,
-                       cluster_rows = TRUE,
-                       treeheight_row = 0,
-                       cluster_cols = FALSE,
-                       gaps_col = cumsum(table(annotation_EndvsStartPup$TP)),
-                       show_rownames = F,
-                       show_colnames = F,
-                       annotation_legend = FALSE,
-                       legend = F,
-                       fontsize = 14,
-                       fontsize_col = 7,
-                       fontsize_row = 6,
-                       main = "(b) interaction: Time Point (Pups)")
-
-heatmap_interaction <- pheatmap(matrix_interaction,
-                       scale = "row", 
-                       color = colorRampPalette(c("#9D00FF", "white", "#FFA500"))(100),
-                       annotation_col = annotation_interaction,
-                       annotation_colors = ann_colors,
-                       cluster_rows = TRUE,
-                       treeheight_row = 0,
-                       cluster_cols = FALSE,
-                       gaps_col = gaps,
-                       show_rownames = F,
-                       show_colnames = F,
-                       annotation_legend = FALSE,
-                       legend = F,
-                       fontsize = 14,
-                       fontsize_col = 7,
-                       fontsize_row = 6,
-                       main = "(c) Interaction: Time point & life history stage")
-
-
-ggsave(here::here("Plots","heatmap_EndvsStartMum.png"), plot = heatmap_EndvsStartMum, width = 7, height = 3.25, dpi = 600)
-ggsave(here::here("Plots","heatmap_EndvsStartPup.png"), plot = heatmap_EndvsStartPup, width = 7, height = 3.75, dpi = 600)
-ggsave(here::here("Plots","heatmap_interaction.png"), plot = heatmap_interaction, width = 7, height = 2, dpi = 600)
-```
-
-### Figure of DEG for interaction
-
-```{r}
-#| label: load_data
-#| echo: FALSE
-#Plot DEG
-
-Allgenes_EndvsStartMum <- as.data.frame(topTreat(tfit_interaction3, coef = "EndvsStartMum", n = nrow(tfit_interaction3)))
-Allgenes_EndvsStartPup <- as.data.frame(topTreat(tfit_interaction3, coef = "EndvsStartPup", n = nrow(tfit_interaction3)))
-Allgenes_Interaction3 <- as.data.frame(topTreat(tfit_interaction3, coef = "Interaction", n = nrow(tfit_interaction3)))
-
-
-#Significance
-Allgenes_EndvsStartMum$Significance <- "'Not significant'"
-Allgenes_EndvsStartMum$Significance[Allgenes_EndvsStartMum$adj.P.Val < adj.P.value & Allgenes_EndvsStartMum$logFC >= lfc] <- "Upregulated"
-Allgenes_EndvsStartMum$Significance[Allgenes_EndvsStartMum$adj.P.Val < adj.P.value & Allgenes_EndvsStartMum$logFC <= -lfc] <- "Downregulated"
-
-Allgenes_EndvsStartPup$Significance <- "'Not significant'"
-Allgenes_EndvsStartPup$Significance[Allgenes_EndvsStartPup$adj.P.Val < adj.P.value & Allgenes_EndvsStartPup$logFC >= lfc] <- "Upregulated"
-Allgenes_EndvsStartPup$Significance[Allgenes_EndvsStartPup$adj.P.Val < adj.P.value & Allgenes_EndvsStartPup$logFC <= -lfc] <- "Downregulated"
-
-Allgenes_Interaction3$Significance <- "'Not significant'"
-Allgenes_Interaction3$Significance[Allgenes_Interaction3$adj.P.Val < adj.P.value & Allgenes_Interaction3$logFC >= lfc] <- "Upregulated"
-Allgenes_Interaction3$Significance[Allgenes_Interaction3$adj.P.Val < adj.P.value & Allgenes_Interaction3$logFC <= -lfc] <- "Downregulated"
-
-
-ITP_MUM_plot <- ggplot(Allgenes_EndvsStartMum, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
-  geom_point() +
-  scale_color_manual(values = clrs) +  
-  scale_size_manual(values = c(0.5, 1, 1)) +
-  labs(title = "(a) Time point (Mothers)", x = "Log2 fold change", y = "-Log10 P-value") +
-  theme_classic() +
-  ylim(0,30) +
-  xlim(-4,4) +
-    theme(
-    legend.position = "top",
-    plot.title.position = "plot")
-
-ITP_Pup_plot <- ggplot(Allgenes_EndvsStartPup, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
-  geom_point() +
-  scale_color_manual(values = clrs) +  
-  scale_size_manual(values = c(0.5, 1, 1)) +
-  labs(title = "(b) Time point (Pups)", x = "Log2 fold change", y = "-Log10 P-value") +
-  theme_classic() +
-  ylim(0,30) +
-  xlim(-4,4) +
-    theme(
-    legend.position = "top",
-    plot.title.position = "plot")
-
-Interaction_plot <- ggplot(Allgenes_Interaction3, aes(x = logFC, y = -log10(P.Value), color = Significance, size = Significance)) +
-  geom_point() +
-  scale_color_manual(values = clrs) +  
-  scale_size_manual(values = c(0.5, 1, 1)) +
-  labs(title = "(c) Time point & life history stage", x = "Log2 fold change", y = "-Log10 P-value") +
-  theme_classic() +
-  ylim(0,30) +
-  xlim(-4,4) +
-    theme(
-    legend.position = "top",
-    plot.title.position = "plot")
-
-# Combine plots
-Interaction_all <- ggarrange(ITP_MUM_plot + fig_theme + theme(axis.title.x = element_blank()), 
-                     ITP_Pup_plot + fig_theme + theme(axis.title.x = element_blank(),
-                                         axis.title.y = element_blank()), 
-                     Interaction_plot + fig_theme, 
-                     NULL, common.legend = T, legend = "bottom")
-
-ggsave(here::here("Plots","Interaction_all.png"), plot = Interaction_all, width = 7, height = 7, dpi = 600)
-```
-
-
-
-## Colony and life stage interaction
-Framework for differential gene expression analysis using interactions by ALB. 
-```{r}
-#| label: load_data
-#| echo: FALSE
-# #Simple interaction (limma manual 9.5.2)
-# #Create a design matrix including life history stage and its interaction with colony
-# d_n$samples$colony.lhs <- as.factor(paste(d_n$samples$colony, d_n$samples$life_history_stage, sep = "."))
-# design_interaction4 <- model.matrix(~ 0+colony.lhs, data = d_n$samples)  # No intercept
-# #Clean column names
-# colnames(design_interaction4) <- c("FWB.Mum", "FWB.Pup", "SSB.Mum", "SSB.Pup")
-# 
-# # #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-# vobj_interaction4 <- voom(d_n, design_interaction4, plot=TRUE)
-# 
-# #Fit a random effect
-# dupcor_interaction4 <- duplicateCorrelation(vobj_interaction4, design_interaction4, block = d_n$samples$ID)
-# # #dupcor_interaction4$consensus #the estimated intra individual correlation (0.1308229)
-# 
-# vobj_interaction4 = voom(d_n, design_interaction4, plot=TRUE, 
-#                         block=d_n$samples$ID, correlation=dupcor_interaction4$consensus)
-# # #update the correlation for the new voom weights
-# dupcor_interaction4 <- duplicateCorrelation(vobj_interaction4, design_interaction4, block = d_n$samples$ID)
-# # #dupcor_interaction4$consensus #the estimated intra individual correlation (0.1308384)
-# 
-# #Estimate linear mixed model with a single variance component
-# vfit_interaction4 <- lmFit(vobj_interaction4, design_interaction4, block=d_n$samples$ID, correlation=dupcor_interaction4$consensus)
-# 
-# #Fit the contrasts we are interested in
-# cont.matrix.interaction4 <- makeContrasts(
-#   SSBvsFWBMum = SSB.Mum - FWB.Mum, #which genes in mothers are DE among colonies
-#   SSBvsFWBPup = SSB.Pup - FWB.Pup,  #which genes in pups are DE among colonies
-#   Interaction = (SSB.Mum - SSB.Pup)-(FWB.Mum - FWB.Pup), #which genes respond different in the two colonies in mums compared to pups
-#   levels = colnames(design_interaction4)
-# )
-# 
-# vfit_interaction4 <- contrasts.fit(vfit_interaction4, contrasts=cont.matrix.interaction4)
-# 
-# #Save the model to avoid recomputing everything
-# saveRDS(vfit_interaction4, file = here::here("Models","vfit_interaction4.rds"))
-
-#Load vfit_interaction
-vfit_interaction4 <- readRDS(here::here("Models","vfit_interaction4.rds"))
-# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
-efit_interaction4 <- eBayes(vfit_interaction4)
-topTable(efit_interaction4, n=20)
-plotSA(efit_interaction4, main="Final model: Mean-variance trend")
-plotMD(efit_interaction4)
-abline(h=0,col="darkgrey")
-
-#adjusted p-value cutoff that is set at 5% by default.
-efit_interaction4$F
-#head(efit_interaction4$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
-#head(efit_interaction4$p.value) #same (not the same?)
-summary(decideTests(efit_interaction4, adjust.method="fdr"))
-
-tfit_interaction4 <- treat(vfit_interaction4, lfc=lfc) 
-topTreat(tfit_interaction4)
-topTreat(tfit_interaction4, coef = "Interaction") #specific for the interaction
-nrow(tfit_interaction4)
-dt_interaction4 <- decideTests(tfit_interaction4, adjust.method="fdr")
-summary(dt_interaction4) 
-```
 
 # GOterms using clusterProfiler
 In this section, we are conducting a gene ontology (GO) enrichment using Clusterprofiler to identify biological processes significantly associated with differentially expressed genes. 
 ```{r}
-#| label: load_data
+#| label: load_packages_for_GO
 #| echo: FALSE
 if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
@@ -1298,7 +824,7 @@ invisible(pacman::p_load(dplyr, clusterProfiler, org.Hs.eg.db, enrichplot, ggplo
 ## Call in DEG
 
 ```{r}
-#| label: load_data
+#| label: load_data_for_GO
 #| echo: FALSE
 #Call up or down regulated genes from differential expression analysis
 file_paths <- list.files(path = "GenesGO", pattern = "^(Upregulated|Downregulated).*\\.csv$", full.names = TRUE)
@@ -1329,7 +855,7 @@ rm(df, file, file_paths, name)
 
 ## Gene ontology: enrichment analysis
 ```{r}
-#| label: load_data
+#| label: Enrichment_analysis
 #| echo: FALSE
 #Go enrichment analysis for up and down regulated genes
 #Time point
@@ -1354,6 +880,7 @@ GO_TP_UP <- GO_TP_UP %>%
   mutate(Regulation = "Upregulated") 
 
 #Life history stage
+#Downregulated_lhs <- Downregulated_lhs[,-1]  #If the code doesn't run as it's supposed to
 GO_LHS_DOWN <- enrichGO(Downregulated_lhs$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
                        universe = Background_lhs$GeneSymbol,
@@ -1373,76 +900,12 @@ GO_LHS_UP <- enrichGO(Upregulated_lhs$GeneSymbol,
                        pAdjustMethod = "BH") 
 GO_LHS_UP <- GO_LHS_UP %>%
   mutate(Regulation = "Upregulated") 
-
-#Interaction
-#TP (mothers)
-I_TP_MUM_DOWN <- enrichGO(Downregulated_EndvsStartMum$GeneSymbol,
-                       OrgDb = org.Hs.eg.db,
-                       universe = Background_inter$GeneSymbol,
-                       keyType = "SYMBOL",
-                       ont = "BP",
-                       pvalueCutoff = 0.05,
-                       pAdjustMethod = "BH") 
-I_TP_MUM_DOWN <- I_TP_MUM_DOWN %>%
-  mutate(Regulation = "Downregulated") 
-
-I_TP_MUM_UP <- enrichGO(Upregulated_EndvsStartMum$GeneSymbol,
-                       OrgDb = org.Hs.eg.db,
-                       universe = Background_inter$GeneSymbol,
-                       keyType = "SYMBOL",
-                       ont = "BP",
-                       pvalueCutoff = 0.05,
-                       pAdjustMethod = "BH") 
-I_TP_MUM_UP <- I_TP_MUM_UP %>%
-  mutate(Regulation = "Upregulated") 
-
-#TP (pups)
-I_TP_PUP_DOWN <- enrichGO(Downregulated_EndvsStartPup$GeneSymbol,
-                       OrgDb = org.Hs.eg.db,
-                       universe = Background_inter$GeneSymbol,
-                       keyType = "SYMBOL",
-                       ont = "BP",
-                       pvalueCutoff = 0.05,
-                       pAdjustMethod = "BH") 
-I_TP_PUP_DOWN <- I_TP_PUP_DOWN %>%
-  mutate(Regulation = "Downregulated") 
-
-I_TP_PUP_UP <- enrichGO(Upregulated_EndvsStartPup$GeneSymbol,
-                       OrgDb = org.Hs.eg.db,
-                       universe = Background_inter$GeneSymbol,
-                       keyType = "SYMBOL",
-                       ont = "BP",
-                       pvalueCutoff = 0.05,
-                       pAdjustMethod = "BH") 
-I_TP_PUP_UP <- I_TP_PUP_UP %>%
-  mutate(Regulation = "Upregulated") 
-
-#Interaction lhs x tp
-I_I_DOWN <- enrichGO(Downregulated_Interaction3$GeneSymbol,
-                       OrgDb = org.Hs.eg.db,
-                       universe = Background_inter$GeneSymbol,
-                       keyType = "SYMBOL",
-                       ont = "BP",
-                       pvalueCutoff = 0.05,
-                       pAdjustMethod = "BH") 
-I_I_DOWN <- I_I_DOWN %>%
-  mutate(Regulation = "Downregulated") 
-
-I_I_UP <- enrichGO(Upregulated_interaction3$GeneSymbol,
-                       OrgDb = org.Hs.eg.db,
-                       universe = Background_inter$GeneSymbol,
-                       keyType = "SYMBOL",
-                       ont = "BP",
-                       pvalueCutoff = 0.05,
-                       pAdjustMethod = "BH") 
-I_I_UP <- I_I_UP %>%
-  mutate(Regulation = "Upregulated") 
 ```
 
 ## Top 20 enriched GOterms (biological process) 
 ### Time point
 ```{r}
-#| label: load_data
+#| label: Top20_TP
 #| echo: FALSE
 #Combine
 GO_TP <- rbind(as.data.frame(GO_TP_DOWN), as.data.frame(GO_TP_UP)) %>%
@@ -1465,12 +928,12 @@ plot_TP <- ggplot(GO_TP, aes(x = zScore, y = -log10(p.adjust))) +
   data = GO_TP_Top20,  
   aes(label = ID),
   nudge_y = 0.03,         #moves label up
-  size = 3,
-  segment.color = NA,    #remove line to point
+  size = 2.5,
+  segment.color = NA,   
   max.overlaps = Inf
 ) +
   labs(
-    title = "(a) Time point",
+    title = "(b) Time point",
     x = "Z-score",
     y = expression(-log[10]("Adjusted p-value")),
     shape = "Regulation"
@@ -1506,13 +969,6 @@ p_table_tp <- ggtexttable(
     "light",
     tbody = list(bg_params = list(fill = row_colors))))
 
-
-fig_theme <- theme(text = element_text(family = "Arial", size = 16),
-                   legend.title = element_blank(),
-                   legend.text=element_text(size=14),
-                   axis.text.x = element_text(size =14),
-                   axis.text.y = element_text(size = 14))
-
 EA_TP <- plot_grid(
  plot_TP + fig_theme + theme(legend.position = "none"),
  NULL,
@@ -1520,15 +976,15 @@ EA_TP <- plot_grid(
  ncol = 3,
  rel_widths = c(1.1, 0.1, 0.90))
 
-ggsave(here::here("Plots","EA_TP.png"), plot = EA_TP, width = 11.5, height = 6.5, dpi = 600)
+#ggsave(here::here("Plots","EA_TP.png"), plot = EA_TP, width = 7, height = 5, dpi = 600)
 
-ggsave(here::here("Plots","Bubble_TP.png"), plot = plot_TP + fig_theme + theme(legend.position = "none"), width = 5, height = 5, dpi = 600)
+ggsave(here::here("Plots","Bubble_TP.png"), plot = plot_TP + fig_theme + theme(legend.position = "none", axis.title.x = element_blank()), width = 4, height = 4, dpi = 600)
 ```
 ![Enrichment analysis: Time Point](Plots/EA_TP.png)
 
 ### Life history stage
 ```{r}
-#| label: load_data
+#| label: Top20_LHS
 #| echo: FALSE
 #Combine
 GO_LHS <- rbind(as.data.frame(GO_LHS_DOWN), as.data.frame(GO_LHS_UP)) %>%
@@ -1551,14 +1007,12 @@ plot_LHS <- ggplot(GO_LHS, aes(x = zScore, y = -log10(p.adjust))) +
   data = GO_LHS_Top20,  
   aes(label = ID),
   nudge_y = 0.03,         #moves label up
-  size = 3,
+  size = 2.5,
   segment.color = NA,
-  force = 2,
+  force = 3,
   max.overlaps = Inf) +
-  xlim(3, 15) +
-  ylim(1,3) +
   labs(
-    title = "(b) Life history stage",
+    title = "(a) Life history stage",
     x = "Z-score",
     y = expression(-log[10]("Adjusted p-value")),
     shape = "Regulation"
@@ -1602,211 +1056,16 @@ EA_LHS <- plot_grid(
  rel_widths = c(1.1,0.1,0.9))
 
 ggsave(here::here("Plots","EA_LHS.png"), plot = EA_LHS, width = 11.5, height = 6.5, dpi = 600)
+  
+ggsave(here::here("Plots","Bubble_LHS.png"), plot = plot_LHS + fig_theme + theme(legend.position = "none"), width = 4, height = 4, dpi = 600)  
 ```
 ![Enrichment analysis: Life hisotry stage](Plots/EA_LHS.png)
 
-### Interaction
-```{r}
-#| label: load_data
-#| echo: FALSE
-#Combine
-I_TP_MUM <- rbind(as.data.frame(I_TP_MUM_DOWN), as.data.frame(I_TP_MUM_UP)) %>%
-  arrange(p.adjust) 
-
-I_TP_PUP <- rbind(as.data.frame(I_TP_PUP_DOWN), as.data.frame(I_TP_PUP_UP)) %>%
-  arrange(p.adjust) 
-
-I_I <- rbind(as.data.frame(I_I_DOWN), as.data.frame(I_I_UP)) %>%
-  arrange(p.adjust) 
-
-#Identify top20
-GO_I_TP_MUM_Top20 <- I_TP_MUM %>%
-  arrange(p.adjust) %>%
-  slice_head(n = 20) 
-
-GO_I_TP_PUPTop20 <- I_TP_PUP %>%
-  arrange(p.adjust) %>%
-  slice_head(n = 20) 
-
-GO_I_I_Top20 <- I_I %>%
-  arrange(p.adjust) %>%
-  slice_head(n = 20) 
-
-#Top 20 GO terms and description
-GO_I_TP_MUM_Top20_table <- GO_I_TP_MUM_Top20[, c("ID", "Description")]
-colnames(GO_I_TP_MUM_Top20_table) <- c("GO Term", "Description")
-rownames(GO_I_TP_MUM_Top20_table) <- NULL
-#Force line break
-GO_I_TP_MUM_Top20_table$Description <- str_wrap(GO_I_TP_MUM_Top20_table$Description, width = 45)
-
-GO_I_TP_PUP_Top20_table <- GO_I_TP_PUPTop20[, c("ID", "Description")]
-colnames(GO_I_TP_PUP_Top20_table) <- c("GO Term", "Description")
-rownames(GO_I_TP_PUP_Top20_table) <- NULL
-#Force line break
-GO_I_TP_PUP_Top20_table$Description <- str_wrap(GO_I_TP_PUP_Top20_table$Description, width = 45)
-
-GO_I_I_Top20_table <- GO_I_I_Top20[, c("ID", "Description")]
-colnames(GO_I_I_Top20_table) <- c("GO Term", "Description")
-rownames(GO_I_I_Top20_table) <- NULL
-#Force line break
-GO_I_I_Top20_table$Description <- str_wrap(GO_I_I_Top20_table$Description, width = 45)
-
-
-#Fancy smancy bubble plot
-plot_I_TP_MUM <- ggplot(I_TP_MUM, aes(x = zScore, y = -log10(p.adjust))) +
-  geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.7) +
-  scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  
-  scale_fill_manual(values = c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5")) +
-  scale_size_continuous(name = "DEG Count") +
-  #Add the top terms to the plot
-  geom_text_repel(
-  data = GO_I_TP_MUM_Top20,  
-  aes(label = ID),
-  nudge_y = -0.03,     
-  size = 3,
-  segment.color = NA,
-  #force = 2,
-  max.overlaps = Inf
-) +
-  labs(
-    title = "Interaction: Time point (Mothers)",
-    x = "Z-score",
-    y = expression(-log[10]("Adjusted p-value (FDR)")),
-    shape = "Regulation"
-  ) +
-  theme_classic() +
-  theme(legend.position = "right",
-        legend.title = element_text(size = 14),   
-        legend.text = element_text(size = 12),     
-        legend.key.size = unit(0.4, "cm")) +
-  guides(
-  size = guide_legend(
-    override.aes = list(shape = 24)  # use triangle in size legend
-  ),
-  fill = "none")
-
-plot_I_TP_PUP <- ggplot(I_TP_PUP, aes(x = zScore, y = -log10(p.adjust))) +
-  geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.7) +
-  scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  
-  scale_fill_manual(values = c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5")) +
-  scale_size_continuous(name = "DEG Count") +
-  #Add the top terms to the plot
-  geom_text_repel(
-  data = GO_I_TP_PUPTop20,  
-  aes(label = ID),
-  nudge_y = -0.03,     
-  size = 3,
-  segment.color = NA,
-  #force = 2,
-  max.overlaps = Inf
-) +
-  labs(
-    title = "Interaction: Time point (Pups)",
-    x = "Z-score",
-    y = expression(-log[10]("Adjusted p-value (FDR)")),
-    shape = "Regulation"
-  ) +
-  theme_classic() +
-  theme(legend.position = "right",
-        legend.title = element_text(size = 14),   
-        legend.text = element_text(size = 12),     
-        legend.key.size = unit(0.4, "cm")) +
-  guides(
-  size = guide_legend(
-    override.aes = list(shape = 24)  # use triangle in size legend
-  ),
-  fill = "none")
-
-plot_I_I <- ggplot(I_I, aes(x = zScore, y = -log10(p.adjust))) +
-  geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.7) +
-  scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  
-  scale_fill_manual(values = c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5")) +
-  scale_size_continuous(name = "DEG Count") +
-  #Add the top terms to the plot
-  geom_text_repel(
-  data = GO_I_I_Top20,  
-  aes(label = ID),
-  nudge_y = -0.03,     
-  size = 3,
-  segment.color = NA,
-  force = 2,
-  max.overlaps = Inf
-) +
-  labs(
-    title = "Interaction: Time point & life history stage)",
-    x = "Z-score",
-    y = expression(-log[10]("Adjusted p-value (FDR)")),
-    shape = "Regulation"
-  ) +
-  theme_classic() +
-  theme(legend.position = "right",
-        legend.title = element_text(size = 14),   
-        legend.text = element_text(size = 12),     
-        legend.key.size = unit(0.4, "cm")) +
-  guides(
-  size = guide_legend(
-    override.aes = list(shape = 24)  # use triangle in size legend
-  ),
-  fill = "none")
-
-## Tables
-# Create alternating row colors
-row_colors <- rep(c("white", "#f0f0f0"), length.out = nrow(GO_LHS_Top20_table))
-
-p_table_I_TP_MUM <- ggtexttable(
-  GO_I_TP_MUM_Top20_table,
-  rows = NULL,
-  theme = ttheme(
-    "light",
-    tbody = list(bg_params = list(fill = row_colors))))
-
-p_table_I_TP_PUP <- ggtexttable(
-  GO_I_TP_PUP_Top20_table,
-  rows = NULL,
-  theme = ttheme(
-    "light",
-    tbody = list(bg_params = list(fill = row_colors))))
-
-p_table_I_I <- ggtexttable(
-  GO_I_I_Top20_table,
-  rows = NULL,
-  theme = ttheme(
-    "light",
-    tbody = list(bg_params = list(fill = row_colors))))
-
-EA_I_TP_MUM <- plot_grid(
- plot_I_TP_MUM,
- NULL,
- p_table_I_TP_MUM,
- ncol = 3,
- rel_widths = c(1.3,0.01,0.9)
-)
-
-EA_I_TP_PUP <- plot_grid(
- plot_I_TP_PUP,
- NULL,
- p_table_I_TP_PUP,
- ncol = 3,
- rel_widths = c(1.3,0.01,0.9)
-)
-
-EA_I_I <- plot_grid(
- plot_I_I,
- NULL,
- p_table_I_I,
- ncol = 3,
- rel_widths = c(1.3,0.01,0.9)
-)
-
-ggsave(here::here("Plots","EA_I_TP_MUM.png"), plot = EA_I_TP_MUM, width = 12, height = 7.5, dpi = 600)
-ggsave(here::here("Plots","EA_I_TP_PUP.png"), plot = EA_I_TP_PUP, width = 12, height = 7.5, dpi = 600)
-ggsave(here::here("Plots","EA_I_I.png"), plot = EA_I_I, width = 12, height = 7.5, dpi = 600)
-```
 
 ## Revigo in R
 REduce and VIsualise Gene Ontology - a tool to reduce redundant GO terms and group the terms based on semantic similarity. 
 ```{r}
-#| label: load_data
+#| label: load_revigo
 #| echo: FALSE
 remotes::install_github("ssayols/rrvgo")
 library(rrvgo)
@@ -1822,12 +1081,6 @@ SM_GO_TP_DOWN <- calculateSimMatrix(GO_TP_DOWN$ID, orgdb = "org.Hs.eg.db", ont =
 SM_GO_TP_UP <- calculateSimMatrix(GO_TP_UP$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
 SM_GO_LHS_DOWN <- calculateSimMatrix(GO_LHS_DOWN$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
 SM_GO_LHS_UP <- calculateSimMatrix(GO_LHS_UP$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
-SM_I_TP_MUM_DOWN <- calculateSimMatrix(I_TP_MUM_DOWN$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
-SM_I_TP_MUM_UP <- calculateSimMatrix(I_TP_MUM_UP$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
-SM_I_TP_PUP_DOWN <- calculateSimMatrix(I_TP_PUP_DOWN$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
-SM_I_TP_PUP_UP <- calculateSimMatrix(I_TP_PUP_UP$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
-SM_I_I_DOWN <- calculateSimMatrix(I_I_DOWN$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
-SM_I_I_UP <- calculateSimMatrix(I_I_UP$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
 ```
 ### Reduce terms
 ```{r}
@@ -1878,58 +1131,6 @@ reduced_LHS_DOWN <- reduceSimMatrix(
     scores = scores_LHS_DOWN,
     threshold = 0.7,
     orgdb = "org.Hs.eg.db")
-
-## Interaction
-scores_I_TP_MUM_DOWN <- -log10(as.numeric(I_TP_MUM_DOWN$p.adjust))
-names(scores_I_TP_MUM_DOWN) <- I_TP_MUM_DOWN$ID
-scores_I_TP_MUM_UP <- -log10(as.numeric(I_TP_MUM_UP$p.adjust))
-names(scores_I_TP_MUM_UP) <- I_TP_MUM_UP$ID
-scores_I_TP_PUP_DOWN <- -log10(as.numeric(I_TP_PUP_DOWN$p.adjust))
-names(scores_I_TP_PUP_DOWN) <- I_TP_PUP_DOWN$ID
-scores_I_TP_PUP_UP <- -log10(as.numeric(I_TP_PUP_UP$p.adjust))
-names(scores_I_TP_PUP_UP) <- I_TP_PUP_UP$ID
-scores_I_I_DOWN <- -log10(as.numeric(I_I_DOWN$p.adjust))
-names(scores_I_I_DOWN) <- I_I_DOWN$ID
-scores_I_I_UP <- -log10(as.numeric(I_I_UP$p.adjust))
-names(scores_I_I_UP) <- I_I_UP$ID
-
-#Reduce terms in interaction
-reduced_I_TP_MUM_DOWN <- reduceSimMatrix(
-    simMatrix = SM_I_TP_MUM_DOWN,
-    scores = scores_I_TP_MUM_DOWN,
-    threshold = 0.7,
-    orgdb = "org.Hs.eg.db")
-
-reduced_I_TP_MUM_UP <- reduceSimMatrix(
-    simMatrix = SM_I_TP_MUM_UP,
-    scores = scores_I_TP_MUM_UP,
-    threshold = 0.7,
-    orgdb = "org.Hs.eg.db")
-
-reduced_I_TP_PUP_DOWN <- reduceSimMatrix(
-    simMatrix = SM_I_TP_PUP_DOWN,
-    scores = scores_I_TP_PUP_DOWN,
-    threshold = 0.7,
-    orgdb = "org.Hs.eg.db")
-
-reduced_I_TP_PUP_UP <- reduceSimMatrix(
-    simMatrix = SM_I_TP_PUP_UP,
-    scores = scores_I_TP_PUP_UP,
-    threshold = 0.7,
-    orgdb = "org.Hs.eg.db")
-
-#Tagged out because it cannot reduce the terms further. 
-#reduced_I_I_DOWN <- reduceSimMatrix(
-#    simMatrix = SM_I_I_DOWN,
-#    scores = scores_I_I_DOWN,
-#    threshold = 0.7,
-#    orgdb = "org.Hs.eg.db")
-
-reduced_I_I_UP <- reduceSimMatrix(
-    simMatrix = SM_I_I_UP,
-    scores = scores_I_I_UP,
-    threshold = 0.7,
-    orgdb = "org.Hs.eg.db")
 ```
 
 ## Heatmaps
@@ -1978,55 +1179,6 @@ HP_GO_LHS <- plot_grid(HP_GO_LHS_UP$gtable, HP_GO_LHS_DOWN$gtable, ncol = 1)
 ggsave(here::here("Plots","HP_GO_LHS.png"), plot = HP_GO_LHS, width = 7, height = 10, dpi = 600)
 ```
 ![Heatmap: GOterms (Life history stage)](Plots/HP_GO_LHS.png)
-### Interaction
-```{r}
-#| label: revigo_heatmap_interaction
-#| echo: FALSE
-
-HP_I_TP_MUM_DOWN <- heatmapPlot(SM_I_TP_MUM_DOWN,
-                                  reduced_I_TP_MUM_DOWN,
-                                  annotateParent=TRUE,
-                                  annotationLabel="parentTerm",
-                                  fontsize=6,
-                                 main = "Interaction: Time point - Mothers (Downregulated)")
-
-HP_I_TP_MUM_UP <- heatmapPlot(SM_I_TP_MUM_UP,
-                                  reduced_I_TP_MUM_UP,
-                                  annotateParent=TRUE,
-                                  annotationLabel="parentTerm",
-                                  fontsize=6,
-                                  main = "Interaction: Time point - Mothers (Upregulated)")
-
-HP_GO_I_TP_MUM <- plot_grid(HP_I_TP_MUM_UP$gtable, HP_I_TP_MUM_DOWN$gtable, ncol = 1)
-ggsave(here::here("Plots","HP_GO_I_TP_MUM.png"), plot = HP_GO_I_TP_MUM, width = 7, height = 10, dpi = 600)
-
-HP_I_TP_PUP_DOWN <- heatmapPlot(SM_I_TP_PUP_DOWN,
-                                  reduced_I_TP_PUP_DOWN,
-                                  annotateParent=TRUE,
-                                  annotationLabel="parentTerm",
-                                  fontsize=6,
-                                 main = "Interaction: Time point - Pups (Downregulated)")
-
-HP_I_TP_PUP_UP <- heatmapPlot(SM_I_TP_PUP_UP,
-                                  reduced_I_TP_PUP_UP,
-                                  annotateParent=TRUE,
-                                  annotationLabel="parentTerm",
-                                  fontsize=6,
-                                  main = "Interaction: Time point - Pups (Upregulated)")
-
-HP_GO_I_TP_PUP <- plot_grid(HP_I_TP_PUP_UP$gtable, HP_I_TP_PUP_DOWN$gtable, ncol = 1)
-ggsave(here::here("Plots","HP_GO_I_TP_PUP.png"), plot = HP_GO_I_TP_PUP, width = 7, height = 10, dpi = 600)
-
-HP_I_I_UP <- heatmapPlot(SM_I_I_UP,
-                                  reduced_I_I_UP,
-                                  annotateParent=TRUE,
-                                  annotationLabel="parentTerm",
-                                  fontsize=6,
-                                  main = "Interaction: Time point & life history stage (Upregulated)")
-
-HP_I_I_UP_plot <- plot_grid(HP_I_I_UP$gtable)
-ggsave(here::here("Plots","HP_I_I_UP_plot.png"), plot = HP_I_I_UP_plot, width = 9, height = 5, dpi = 600)
-```
 
 ## Scatterplots
 ### Time point
@@ -2093,9 +1245,8 @@ SP_LHS_GO <- plot_grid(SP_GO_LHS_UP + fig_theme,
 combined_SP <- plot_grid(SP_TP_GO, SP_LHS_GO, ncol = 1)
 ggsave(here::here("Plots","combined_SP.png"), plot = combined_SP, width = 7, height = 7, dpi = 600)
 ```
-![Semantic similarity of GOterms (Life history stage)](Plots/SP_LHS_GO.png)
 
-#### scatter plot with more flexibility
+#### scatterplot with more flexibility
 ```{r}
 #| label: scatterplot_manual
 #| echo: FALSE
@@ -2112,9 +1263,9 @@ parent_colors <- c(
 
 # Function to generate semantic similarity scatter plot
 plot_semantic_similarity <- function(simMatrix, reducedTerms, title_text, 
-                                     parent_colors, xlim_val = c(-1.2, 1.2), ylim_val = c(-1.2, 1.2),
-                                     point_alpha = 0.5, point_range = c(0, 20), label_size = 3.5,
-                                     top_n = NULL, min_score = NULL, box_padding = 0.25) {
+                                     parent_colors, xlim_val = c(-1, 1), ylim_val = c(-1, 1),
+                                     point_alpha = 0.5, point_range = c(0, 20), label_size = 2.42,
+                                     top_n = NULL, min_score = NULL, box_padding = 0.09) {
   
   # 1. Distance matrix
   dist_mat <- as.dist(1 - simMatrix)
@@ -2170,9 +1321,9 @@ label_data <- df %>%
     ggtitle(title_text) +
     geom_label_repel(aes(label = parentTerm),
                      data = label_data,
-                     force = 3,
+                     force = 1,
                      box.padding = unit(box_padding, "lines"),
-                     point.padding = unit(0.5, "lines"),
+                     point.padding = unit(0.2, "lines"),
                      size = label_size,
                      max.overlaps = Inf)
   
@@ -2183,11 +1334,11 @@ label_data <- df %>%
 # Example usage for your four datasets
 
 SP_GO_TP_UP   <- plot_semantic_similarity(SM_GO_TP_UP, reduced_TP_UP, 
-                                          "(a) Upregulated on day 60", parent_colors)
+                                          "(c) Upregulated on day 60", parent_colors)
 SP_GO_TP_DOWN <- plot_semantic_similarity(SM_GO_TP_DOWN, reduced_TP_DOWN, 
-                                          "(b) Downregulated on day 60", parent_colors)
+                                          "(d) Downregulated on day 60", parent_colors)
 SP_GO_LHS_UP  <- plot_semantic_similarity(SM_GO_LHS_UP, reduced_LHS_UP, 
-                                          "(c) Upregulated in mothers", parent_colors)
+                                          "(a) Upregulated in mothers", parent_colors)
 parent_colors <- c(
  "#FDA172", "#9867B5", "#8B9E58", "#4C6A92",
  "#C44B4E", "#C46A00", "#B58E36", "#6C75A9",
@@ -2196,73 +1347,16 @@ parent_colors <- c(
  "#C4889F", "#74935E", "#9A7C5D", "#66778B", "#A37B9A")
 
 SP_GO_LHS_DOWN <- plot_semantic_similarity(SM_GO_LHS_DOWN, reduced_LHS_DOWN, 
-                                        "(d) Upregulated in pups", parent_colors, box_padding = 0.7)
+                                        "(b) Upregulated in pups", parent_colors, box_padding = 0.42)
 
-
-SP_TP_GO <- plot_grid(SP_GO_TP_UP + 
+  
+SP_LHS_GO <- plot_grid(SP_GO_LHS_UP + 
                         theme(axis.title.x = element_blank()) + fig_theme, 
-                      SP_GO_TP_DOWN + fig_theme + theme(axis.title = element_blank()), rel_widths = c(1.05, 1))
-SP_LHS_GO <- plot_grid(SP_GO_LHS_UP + fig_theme, 
-                       SP_GO_LHS_DOWN + fig_theme + theme(axis.title.y = element_blank()), ncol = 2, rel_widths = c(1.05, 1))
-combined_SP <- plot_grid(SP_TP_GO, SP_LHS_GO, ncol = 1)
-ggsave(here::here("Plots","combined_SP.png"), plot = combined_SP, width = 9, height = 9, dpi = 600)
+                      SP_GO_LHS_DOWN + fig_theme + theme(axis.title = element_blank()), rel_widths = c(1.05, 1))
+SP_TP_GO <- plot_grid(SP_GO_TP_UP + fig_theme, 
+                       SP_GO_TP_DOWN + fig_theme + theme(axis.title.y = element_blank()), ncol = 2, rel_widths = c(1.05, 1))  
+  
+combined_SP <- plot_grid(SP_LHS_GO, SP_TP_GO, ncol = 1)
+ggsave(here::here("Plots","combined_SP.png"), plot = combined_SP, width = 7, height = 7, dpi = 600)
 ```
-
-
-
-### Interaction
-```{r}
-#| label: scatterplot_interaction
-#| echo: FALSE
-
-
-SP_I_TP_MUM_DOWN <- scatterPlot(SM_I_TP_MUM_DOWN,reduced_I_TP_MUM_DOWN) +  
-                                theme_classic() + 
-                                xlim(c(-1,1)) + 
-                                ylim(c(-1,1)) +
-                                xlab("Semantic space x") +
-                                ylab("Semantic space y") +
-                                ggtitle("Interaction: Time point - Mothers (Downregulated)")
-
-SP_I_TP_MUM_UP <- scatterPlot(SM_I_TP_MUM_UP,reduced_I_TP_MUM_UP) +  
-                                theme_classic() + 
-                                xlim(c(-1,1)) + 
-                                ylim(c(-1,1)) +
-                                xlab("Semantic space x") +
-                                ylab("Semantic space y") +
-                                ggtitle("Interaction: Time point - Mothers (Upregulated)")
-
-SP_GO_I_TP_MUM <- plot_grid(SP_I_TP_MUM_UP, SP_I_TP_MUM_DOWN)
-ggsave(here::here("Plots","SP_GO_I_TP_MUM.png"), plot = SP_GO_I_TP_MUM, width = 9, height = 4.5, dpi = 600)
-
-SP_I_TP_PUP_DOWN <- scatterPlot(SM_I_TP_PUP_DOWN,reduced_I_TP_PUP_DOWN) +  
-                                theme_classic() + 
-                                xlim(c(-1,1)) + 
-                                ylim(c(-1,1)) +
-                                xlab("Semantic space x") +
-                                ylab("Semantic space y") +
-                                ggtitle("Interaction: Time point - Pups (Downregulated)")
-
-SP_I_TP_PUP_UP <- scatterPlot(SM_I_TP_PUP_UP,reduced_I_TP_PUP_UP) +  
-                                theme_classic() + 
-                                xlim(c(-1,1)) + 
-                                ylim(c(-1,1)) +
-                                xlab("Semantic space x") +
-                                ylab("Semantic space y") +
-                                ggtitle("Interaction: Time point - Pups (Upregulated)")
-
-SP_GO_I_TP_PUP <- plot_grid(SP_I_TP_PUP_UP, SP_I_TP_PUP_DOWN)
-ggsave(here::here("Plots","SP_GO_I_TP_PUP.png"), plot = SP_GO_I_TP_PUP, width = 9, height = 4.5, dpi = 600)
-
-
-SP_I_I_UP <- scatterPlot(SM_I_I_UP,reduced_I_I_UP) +  
-                                theme_classic() + 
-                                xlim(c(-1,1)) + 
-                                ylim(c(-1,1)) +
-                                xlab("Semantic space x") +
-                                ylab("Semantic space y") +
-                                ggtitle("Interaction: Time point & life history stage (Upregulated)")
-
-SP_I_I_UP_plot <- plot_grid(SP_I_I_UP)
-ggsave(here::here("Plots","SP_I_I_UP_plot.png"), plot = SP_I_I_UP_plot, width = 4.5, height = 4.5, dpi = 600)
-```
+![Semantic similarity of GOterms (Life history stage)](Plots/combined_SP.png)
