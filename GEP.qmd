@@ -217,7 +217,7 @@ legend_theme <- theme(
     legend.justification = c("right", "top"), 
     legend.background = element_rect(fill = alpha('white', 0.7), color = NA), 
     legend.key.size = unit(0.8, "lines"), 
-    text = element_text(family = "Arial", size = 14))
+    text = element_text(family = "Arial", size = 12))
 
 PCA_plots <- plot_grid(PCA_TP + legend_theme + theme(axis.title.x = element_blank()),
                        PCA_LHS + legend_theme + theme(axis.title.x = element_blank(),
@@ -229,21 +229,21 @@ PCA_plots <- plot_grid(PCA_TP + legend_theme + theme(axis.title.x = element_blan
 ggsave(here::here("Plots","PCA_plots.png"), plot = PCA_plots, dpi = 600)
 rm(PCA_LHS, PCA_TP, PCA_Y, PCA_C)
 
-summary_table <- subset(pc_scores, select = c("ID", "SampleID", "year", "colony", "life_history_stage", "group"))
-colnames(summary_table) <- c("ID", "SampleID", "Season", "Colony", "Life history stage", "Time point")
-rownames(summary_table) <- NULL
-summary_table <- kable(summary_table) %>% kable_styling("striped")
-kableExtra::save_kable(summary_table, file = "table.pdf")
-
-summary_short <- subset(pc_scores, select = c("year", "colony", "life_history_stage", "group"))
-colnames(summary_short) <- c("Season", "Colony", "Life history stage", "Time point")
-names(summary_short) <- make.names(names(summary_short))
-summary_short<- summary_short %>%
-  group_by(across(everything())) %>%
-  summarise(count= n(), .groups = "drop")
-rownames(summary_short) <- NULL
-summary_short <- kable(summary_short) %>% kable_styling("striped")
-kableExtra::save_kable(summary_short, file = "table_short.pdf")
+# summary_table <- subset(pc_scores, select = c("ID", "SampleID", "year", "colony", "life_history_stage", "group"))
+# colnames(summary_table) <- c("ID", "SampleID", "Season", "Colony", "Life history stage", "Time point")
+# rownames(summary_table) <- NULL
+# summary_table <- kable(summary_table) %>% kable_styling("striped")
+# kableExtra::save_kable(summary_table, file = "table.pdf")
+# 
+# summary_short <- subset(pc_scores, select = c("year", "colony", "life_history_stage", "group"))
+# colnames(summary_short) <- c("Season", "Colony", "Life history stage", "Time point")
+# names(summary_short) <- make.names(names(summary_short))
+# summary_short<- summary_short %>%
+#   group_by(across(everything())) %>%
+#   summarise(count= n(), .groups = "drop")
+# rownames(summary_short) <- NULL
+# summary_short <- kable(summary_short) %>% kable_styling("striped")
+# kableExtra::save_kable(summary_short, file = "table_short.pdf")
 ```
 
 ![Principle component analysis of processed data](Plots/PCA_plots.png)
@@ -296,11 +296,11 @@ In this section, we will perform differential gene expression analysis to identi
 clrs <- c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5", "'Not significant'" = "grey20")
 lfc <- 1 
 adj.P.value <- 0.05
-fig_theme <- theme(text = element_text(family = "Arial", size = 14),
+fig_theme <- theme(text = element_text(family = "Arial", size = 12),
                    legend.title = element_blank(),
-                   legend.text=element_text(size=12),
-                   axis.text.x = element_text(size =12),
-                   axis.text.y = element_text(size = 12))
+                   legend.text=element_text(size=10),
+                   axis.text.x = element_text(size =10),
+                   axis.text.y = element_text(size = 10))
 
 ann_colors <- list(
   TP = c("Day 0" = "#8B9E58", "Day 60" = "#638B9B"),
@@ -403,11 +403,11 @@ tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(adj.P.Val), color = Sig
   geom_vline(xintercept = c(-1, 1), col = "gray", linetype = 'dashed') +
   geom_point() +
   scale_color_manual(values = clrs) +  
-  scale_size_manual(values = c(1, 2, 2)) +
+  scale_size_manual(values = c(0.5, 1, 1)) +
   labs(title = "(a) Time point", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
   theme_classic() +
-  #ylim(0,15) +
-  #xlim(-4,4) +
+  ylim(0,50) +
+  xlim(-4.1,4.1) +
   theme(
     legend.position = "bottom",
     plot.title.position = "plot")
@@ -433,8 +433,6 @@ annotation$TP <- factor(annotation$TP, levels = c("Day 0", "Day 60"))
 matrix_tp <- expression_tp[, order(annotation$TP)]
 annotation_tp <- annotation[order(annotation$TP), , drop = FALSE]
 
-install.packages("ComplexHeatmap")
-
 heatmap_tp <- pheatmap(matrix_tp,
                        scale = "row",  # normalize rows (genes)
                        color = colorRampPalette(c("#9D00FF", "white", "#FFA500"))(100),
@@ -448,32 +446,12 @@ heatmap_tp <- pheatmap(matrix_tp,
                        show_colnames = FALSE,
                        annotation_legend = FALSE,
                        legend = F,
-                       fontsize = 14,
+                       fontsize = 12,
                        fontsize_col = 7,
                        fontsize_row = 6,
-                       main = "(c) Time point")
+                       main = NA)
 
-#ggsave(here::here("Plots","heatmap_tp.png"), plot = heatmap_tp, width = 7, height = 7, dpi = 600)
-
-png("heatmap_tp.png", width=6, height=8, units="in", res=600)
-pheatmap(matrix_tp,
-         scale = "row",
-         color = colorRampPalette(c("#9D00FF", "white", "#FFA500"))(100),
-         annotation_colors = ann_colors,
-         annotation_col = annotation_tp,
-         cluster_rows = TRUE,
-         cluster_cols = FALSE,
-         gaps_col = cumsum(table(annotation_tp$TP)),
-         show_rownames = FALSE,
-         show_colnames = FALSE,
-         annotation_legend = FALSE,
-         legend = FALSE,
-         fontsize = 14,
-         fontsize_col = 7,
-         fontsize_row = 6,
-         main = "(c) Time point")
-dev.off()
-
+ggsave(here::here("Plots","heatmap_tp.png"), plot = heatmap_tp, width = 3.5, height = 5, dpi = 600)
 ```
 
 ![Heatmap: Time point](Plots/heatmap_tp.png)
@@ -570,11 +548,11 @@ lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(adj.P.Val), color = S
   geom_vline(xintercept = c(-1, 1), col = "gray", linetype = 'dashed') +
   geom_point() +
   scale_color_manual(values = clrs) +  
-  scale_size_manual(values = c(1, 2, 2)) +
+  scale_size_manual(values = c(0.5, 1, 1)) +
   labs(title = "(b) Life history stage", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
   theme_classic() +
-  #ylim(0,15) +
-  #xlim(-4,4) +
+  ylim(0,50) +
+  xlim(-4.1,4.1) +
   theme(
     legend.position = "bottom",
     plot.title.position = "plot")
@@ -613,13 +591,13 @@ heatmap_lhs <- pheatmap(matrix_lhs,
                        show_colnames = F,
                        annotation_legend = FALSE,
                        legend = F,
-                       fontsize = 14,
+                       fontsize = 12,
                        fontsize_col = 7,
                        fontsize_row = 6,
-                       main = "(d) Life history stage")
+                       main = NA)
 
 
-ggsave(here::here("Plots","heatmap_lhs.png"), plot = heatmap_lhs, width = 7, height = 7, dpi = 600)
+ggsave(here::here("Plots","heatmap_lhs.png"), plot = heatmap_lhs, width = 3.5, height = 6, dpi = 600)
 ```
 
 ![Heatmap: Life history stage](Plots/heatmap_lhs.png)
@@ -810,6 +788,11 @@ tp_plot <- tp_plot + fig_theme + theme(axis.title.x = element_blank())
 DEG_all <- ggarrange(tp_plot, lhs_plot, y_plot, c_plot, common.legend = T, legend = "bottom")
 
 ggsave(here::here("Plots","DEG_all.png"), plot = DEG_all, width = 7, height = 7, dpi = 600)
+
+#Plot for only time point and life history stage
+
+DEG_TPLHS <- ggarrange(tp_plot + fig_theme, lhs_plot + fig_theme, common.legend = T, legend = "bottom")
+ggsave(here::here("Plots","DEG_TPLHS.png"), plot = DEG_TPLHS, width = 7, height = 3.5, dpi = 600)
 ```
 
 ![Differential gene expression analysis](Plots/DEG_all.png)
@@ -1487,9 +1470,9 @@ plot_TP <- ggplot(GO_TP, aes(x = zScore, y = -log10(p.adjust))) +
   max.overlaps = Inf
 ) +
   labs(
-    title = "Enrichment analysis (Time point)",
+    title = "(a) Time point",
     x = "Z-score",
-    y = expression(-log[10]("Adjusted p-value (FDR)")),
+    y = expression(-log[10]("Adjusted p-value")),
     shape = "Regulation"
   ) +
   theme_classic() +
@@ -1510,7 +1493,7 @@ colnames(GO_TP_Top20_table) <- c("GO Term", "Description")
 rownames(GO_TP_Top20_table) <- NULL
 
 #Force line break
-GO_TP_Top20_table$Description <- str_wrap(GO_TP_Top20_table$Description, width = 45)
+GO_TP_Top20_table$Description <- str_wrap(GO_TP_Top20_table$Description, width = 50)
 
 # Create alternating row colors
 row_colors <- rep(c("white", "#f0f0f0"), length.out = nrow(GO_TP_Top20_table))
@@ -1523,15 +1506,23 @@ p_table_tp <- ggtexttable(
     "light",
     tbody = list(bg_params = list(fill = row_colors))))
 
+
+fig_theme <- theme(text = element_text(family = "Arial", size = 16),
+                   legend.title = element_blank(),
+                   legend.text=element_text(size=14),
+                   axis.text.x = element_text(size =14),
+                   axis.text.y = element_text(size = 14))
+
 EA_TP <- plot_grid(
- plot_TP,
+ plot_TP + fig_theme + theme(legend.position = "none"),
  NULL,
  p_table_tp,
  ncol = 3,
- rel_widths = c(1.3,0.01,0.9)
-)
+ rel_widths = c(1.1, 0.1, 0.90))
 
-ggsave(here::here("Plots","EA_TP.png"), plot = EA_TP, width = 12, height = 7.5, dpi = 600)
+ggsave(here::here("Plots","EA_TP.png"), plot = EA_TP, width = 11.5, height = 6.5, dpi = 600)
+
+ggsave(here::here("Plots","Bubble_TP.png"), plot = plot_TP + fig_theme + theme(legend.position = "none"), width = 5, height = 5, dpi = 600)
 ```
 ![Enrichment analysis: Time Point](Plots/EA_TP.png)
 
@@ -1563,13 +1554,13 @@ plot_LHS <- ggplot(GO_LHS, aes(x = zScore, y = -log10(p.adjust))) +
   size = 3,
   segment.color = NA,
   force = 2,
-  max.overlaps = Inf
-) +
-  
+  max.overlaps = Inf) +
+  xlim(3, 15) +
+  ylim(1,3) +
   labs(
-    title = "Enrichment analysis (Life history stage)",
+    title = "(b) Life history stage",
     x = "Z-score",
-    y = expression(-log[10]("Adjusted p-value (FDR)")),
+    y = expression(-log[10]("Adjusted p-value")),
     shape = "Regulation"
   ) +
   
@@ -1590,7 +1581,7 @@ GO_LHS_Top20_table <- GO_LHS_Top20[, c("ID", "Description")]
 colnames(GO_LHS_Top20_table) <- c("GO Term", "Description")
 rownames(GO_LHS_Top20_table) <- NULL
 #Force line break
-GO_LHS_Top20_table$Description <- str_wrap(GO_LHS_Top20_table$Description, width = 45)
+GO_LHS_Top20_table$Description <- str_wrap(GO_LHS_Top20_table$Description, width = 50)
 
 #Create alternating row colors
 row_colors <- rep(c("white", "#f0f0f0"), length.out = nrow(GO_LHS_Top20_table))
@@ -1604,14 +1595,13 @@ p_table_lhs <- ggtexttable(
     tbody = list(bg_params = list(fill = row_colors))))
 
 EA_LHS <- plot_grid(
- plot_LHS,
+ plot_LHS + fig_theme + theme(legend.position = "none"),
  NULL,
  p_table_lhs,
  ncol = 3,
- rel_widths = c(1.3,0.01,0.9)
-)
+ rel_widths = c(1.1,0.1,0.9))
 
-ggsave(here::here("Plots","EA_LHS.png"), plot = EA_LHS, width = 12, height = 7.5, dpi = 600)
+ggsave(here::here("Plots","EA_LHS.png"), plot = EA_LHS, width = 11.5, height = 6.5, dpi = 600)
 ```
 ![Enrichment analysis: Life hisotry stage](Plots/EA_LHS.png)
 
@@ -2043,7 +2033,7 @@ ggsave(here::here("Plots","HP_I_I_UP_plot.png"), plot = HP_I_I_UP_plot, width = 
 ```{r}
 #| label: scatterplot_time_point
 #| echo: FALSE
-SP_GO_TP_UP <- scatterPlot(SM_GO_TP_UP, reduced_TP_UP) + 
+SP_GO_TP_UP <- scatterPlot(SM_GO_TP_UP, reduced_TP_UP, size = "score", addLabel = T, labelSize = 3) + 
   theme_classic() + 
   xlim(c(-1,1)) + 
   ylim(c(-1,1)) +
@@ -2051,7 +2041,7 @@ SP_GO_TP_UP <- scatterPlot(SM_GO_TP_UP, reduced_TP_UP) +
   ylab("Semantic space y") +
   ggtitle("Time point: downregulated") 
 
-SP_GO_TP_DOWN <- scatterPlot(SM_GO_TP_DOWN, reduced_TP_DOWN) + 
+SP_GO_TP_DOWN <- scatterPlot(SM_GO_TP_DOWN, reduced_TP_DOWN, size = "score", addLabel = T, labelSize = 3) + 
   theme_classic() + 
   xlim(c(-1,1)) + 
   ylim(c(-1,1)) +
@@ -2059,7 +2049,7 @@ SP_GO_TP_DOWN <- scatterPlot(SM_GO_TP_DOWN, reduced_TP_DOWN) +
   ylab("Semantic space y") +
   ggtitle("Time point: downregulated") 
 
-SP_TP_GO <- plot_grid(SP_GO_TP_UP, SP_GO_TP_DOWN)
+SP_TP_GO <- plot_grid(SP_GO_TP_UP + fig_theme, SP_GO_TP_DOWN+fig_theme)
 ggsave(here::here("Plots","SP_TP_GO.png"), plot = SP_TP_GO, width = 9, height = 4.5, dpi = 600)
 ```
 ![Semantic similarity of GOterms (Time point)](Plots/SP_TP_GO.png)
@@ -2068,7 +2058,7 @@ ggsave(here::here("Plots","SP_TP_GO.png"), plot = SP_TP_GO, width = 9, height = 
 #| label: scatterplot_life_history_stage
 #| echo: FALSE
 
-SP_GO_LHS_UP <- scatterPlot(SM_GO_LHS_UP, reduced_LHS_UP) + 
+SP_GO_LHS_UP <- scatterPlot(SM_GO_LHS_UP, reduced_LHS_UP, size = "score", addLabel = T, labelSize = 3) + 
   theme_classic() + 
   xlim(c(-1,1)) + 
   ylim(c(-1,1)) +
@@ -2076,16 +2066,150 @@ SP_GO_LHS_UP <- scatterPlot(SM_GO_LHS_UP, reduced_LHS_UP) +
   ylab("Semantic space y") +
   ggtitle("Life history stage: upregulated") 
 
-SP_GO_LHS_DOWN <- scatterPlot(SM_GO_LHS_DOWN, reduced_LHS_DOWN) + 
+SP_GO_LHS_DOWN <- scatterPlot(SM_GO_LHS_DOWN, reduced_LHS_DOWN, size = "score", addLabel = T, labelSize = 3) + 
   theme_classic() +
+  xlim(c(-1,1)) + 
+  ylim(c(-1,1)) +
   xlab("Semantic space x") +
   ylab("Semantic space y") +
   ggtitle("Life history stage: downregulated") 
 
 SP_LHS_GO <- plot_grid(SP_GO_LHS_UP, SP_GO_LHS_DOWN)
 ggsave(here::here("Plots","SP_LHS_GO.png"), plot = SP_LHS_GO, width = 9, height = 4.5, dpi = 600)
+
+fig_theme <- theme(text = element_text(family = "Arial", size = 14),
+                   legend.title = element_blank(),
+                   legend.text=element_text(size=12),
+                   axis.text.x = element_text(size =12),
+                   axis.text.y = element_text(size = 12))
+
+SP_TP_GO <- plot_grid(SP_GO_TP_UP + 
+                        theme(axis.title.x = element_blank()) + fig_theme, 
+                      SP_GO_TP_DOWN +fig_theme +
+                        theme(axis.title.x = element_blank(),
+                              axis.title.y = element_blank()))
+SP_LHS_GO <- plot_grid(SP_GO_LHS_UP + fig_theme, 
+                       SP_GO_LHS_DOWN + fig_theme + theme(axis.title.y = element_blank()))
+combined_SP <- plot_grid(SP_TP_GO, SP_LHS_GO, ncol = 1)
+ggsave(here::here("Plots","combined_SP.png"), plot = combined_SP, width = 7, height = 7, dpi = 600)
 ```
 ![Semantic similarity of GOterms (Life history stage)](Plots/SP_LHS_GO.png)
+
+#### scatter plot with more flexibility
+```{r}
+#| label: scatterplot_manual
+#| echo: FALSE
+parent_colors <- c(
+  "#FDA172",  # orange
+  "#9867B5",  # purple
+  "#8B9E58",  # olive green
+  "#638B9B",  # teal
+  "#C44B4E",  # deep red
+  "#C46A00",  # rusty orange
+  "#B58E36",  # golden brown
+  "#6C75A9"   # muted blue-grey
+)
+
+# Function to generate semantic similarity scatter plot
+plot_semantic_similarity <- function(simMatrix, reducedTerms, title_text, 
+                                     parent_colors, xlim_val = c(-1.2, 1.2), ylim_val = c(-1.2, 1.2),
+                                     point_alpha = 0.5, point_range = c(0, 20), label_size = 3.5,
+                                     top_n = NULL, min_score = NULL, box_padding = 0.25) {
+  
+  # 1. Distance matrix
+  dist_mat <- as.dist(1 - simMatrix)
+  
+  # 2. MDS
+  mds <- cmdscale(dist_mat, eig = TRUE, k = 2)
+  
+  # 3. Build dataframe with metadata
+  df <- as.data.frame(mds$points)
+  df$go <- rownames(df)
+  df <- merge(df, reducedTerms[, c("go", "term", "parent", "parentTerm", "score")],
+              by = "go", all.x = TRUE)
+  
+  # 4.select top 5 most important parent terms
+top_per_parent <- df %>%
+  group_by(parent) %>%
+  slice_max(score, n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+top_parents <- top_per_parent %>%
+  arrange(desc(score)) %>%
+  slice(1:5) %>%   # top 5 parents
+  pull(parent) 
+
+label_data <- df %>%
+  filter(parent %in% top_parents) %>%
+  group_by(parentTerm) %>%
+  summarise(
+    V1 = mean(V1),
+    V2 = mean(V2),
+    score = max(score)
+  ) %>%
+  ungroup()
+  
+  # 5. Filter top N or by minimum score if requested
+  if(!is.null(top_n)) {
+    label_data <- label_data %>% arrange(desc(score)) %>% slice(1:top_n)
+  }
+  if(!is.null(min_score)) {
+    label_data <- label_data %>% filter(score >= min_score)
+  }
+  
+  # 6. Plot
+  p <- ggplot(df, aes(x = V1, y = V2, color = parentTerm)) +
+    geom_point(aes(size = score), alpha = point_alpha) +
+    scale_color_manual(values = parent_colors, guide = "none") +
+    scale_size_continuous(range = point_range, guide = "none") +
+    theme_classic() +
+    xlim(xlim_val) +
+    ylim(ylim_val) +
+    xlab("Semantic space x") +
+    ylab("Semantic space y") +
+    ggtitle(title_text) +
+    geom_label_repel(aes(label = parentTerm),
+                     data = label_data,
+                     force = 3,
+                     box.padding = unit(box_padding, "lines"),
+                     point.padding = unit(0.5, "lines"),
+                     size = label_size,
+                     max.overlaps = Inf)
+  
+  return(p)
+}
+
+# -------------------------------
+# Example usage for your four datasets
+
+SP_GO_TP_UP   <- plot_semantic_similarity(SM_GO_TP_UP, reduced_TP_UP, 
+                                          "(a) Upregulated on day 60", parent_colors)
+SP_GO_TP_DOWN <- plot_semantic_similarity(SM_GO_TP_DOWN, reduced_TP_DOWN, 
+                                          "(b) Downregulated on day 60", parent_colors)
+SP_GO_LHS_UP  <- plot_semantic_similarity(SM_GO_LHS_UP, reduced_LHS_UP, 
+                                          "(c) Upregulated in mothers", parent_colors)
+parent_colors <- c(
+ "#FDA172", "#9867B5", "#8B9E58", "#4C6A92",
+ "#C44B4E", "#C46A00", "#B58E36", "#6C75A9",
+ "#A67C52", "#7A5E7E", "#5C8C6B", "#7289B0",
+ "#D98C6D", "#8B6D92", "#B5A04C", "#587085",
+ "#C4889F", "#74935E", "#9A7C5D", "#66778B", "#A37B9A")
+
+SP_GO_LHS_DOWN <- plot_semantic_similarity(SM_GO_LHS_DOWN, reduced_LHS_DOWN, 
+                                        "(d) Upregulated in pups", parent_colors, box_padding = 0.7)
+
+
+SP_TP_GO <- plot_grid(SP_GO_TP_UP + 
+                        theme(axis.title.x = element_blank()) + fig_theme, 
+                      SP_GO_TP_DOWN + fig_theme + theme(axis.title = element_blank()), rel_widths = c(1.05, 1))
+SP_LHS_GO <- plot_grid(SP_GO_LHS_UP + fig_theme, 
+                       SP_GO_LHS_DOWN + fig_theme + theme(axis.title.y = element_blank()), ncol = 2, rel_widths = c(1.05, 1))
+combined_SP <- plot_grid(SP_TP_GO, SP_LHS_GO, ncol = 1)
+ggsave(here::here("Plots","combined_SP.png"), plot = combined_SP, width = 9, height = 9, dpi = 600)
+```
+
+
+
 ### Interaction
 ```{r}
 #| label: scatterplot_interaction
