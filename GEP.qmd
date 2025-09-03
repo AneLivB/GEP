@@ -1063,7 +1063,7 @@ ggsave(here::here("Plots","Bubble_LHS.png"), plot = plot_LHS + fig_theme + theme
   
 Bubble_together <- plot_grid(plot_LHS + fig_theme + theme(legend.position = "none", axis.title.x = element_blank()),
   plot_TP + fig_theme + theme(legend.position = "none"), ncol = 1, align = "v", rel_heights = c(1, 1.1))  
-ggsave(here::here("Plots","Bubble_LHSTP.png"), plot = Bubble_together, width = 4, height = 8, dpi = 600)  
+ggsave(here::here("Plots","Bubble_LHSTP.png"), plot = Bubble_together, width = 4, height = 10, dpi = 600)  
 ```
 ![Enrichment analysis: Life hisotry stage](Plots/EA_LHS.png)
 
