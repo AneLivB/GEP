@@ -412,7 +412,7 @@ tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(adj.P.Val), color = Sig
   geom_vline(xintercept = c(-1, 1), col = "gray", linetype = 'dashed') +
   geom_point() +
   scale_color_manual(values = clrs) +  
-  scale_size_manual(values = c(0.5, 1, 1)) +
+  scale_size_manual(values = c(1, 0.5, 1)) +
   labs(title = "(b) Time point", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
   theme_classic() +
   ylim(0,50) +
@@ -557,7 +557,7 @@ lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(adj.P.Val), color = S
   geom_vline(xintercept = c(-1, 1), col = "gray", linetype = 'dashed') +
   geom_point() +
   scale_color_manual(values = clrs) +  
-  scale_size_manual(values = c(0.5, 1, 1)) +
+  scale_size_manual(values = c(1, 0.5, 1)) +
   labs(title = "(a) Life history stage", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
   theme_classic() +
   ylim(0,50) +
