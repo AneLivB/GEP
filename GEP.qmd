@@ -918,7 +918,7 @@ GO_TP_Top20 <- GO_TP %>%
 
 #Fancy smancy bubble plot
 plot_TP <- ggplot(GO_TP, aes(x = zScore, y = -log10(p.adjust))) +
-  geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.7) +
+  geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.5) +
 
   scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  
   scale_fill_manual(values = c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5")) +
@@ -929,7 +929,8 @@ plot_TP <- ggplot(GO_TP, aes(x = zScore, y = -log10(p.adjust))) +
   aes(label = ID),
   nudge_y = 0.03,         #moves label up
   size = 2.5,
-  segment.color = NA,   
+  segment.color = NA,
+  force = 2, 
   max.overlaps = Inf
 ) +
   labs(
@@ -978,7 +979,7 @@ EA_TP <- plot_grid(
 
 #ggsave(here::here("Plots","EA_TP.png"), plot = EA_TP, width = 7, height = 5, dpi = 600)
 
-ggsave(here::here("Plots","Bubble_TP.png"), plot = plot_TP + fig_theme + theme(legend.position = "none", axis.title.x = element_blank()), width = 4, height = 4, dpi = 600)
+ggsave(here::here("Plots","Bubble_TP.png"), plot = plot_TP + fig_theme + theme(legend.position = "none"), width = 4, height = 4, dpi = 600)
 ```
 ![Enrichment analysis: Time Point](Plots/EA_TP.png)
 
@@ -997,7 +998,7 @@ GO_LHS_Top20 <- GO_LHS %>%
 
 #Fancy smancy bubble plot
 plot_LHS <- ggplot(GO_LHS, aes(x = zScore, y = -log10(p.adjust))) +
-  geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.7) +
+  geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.5) +
 
   scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  
   scale_fill_manual(values = c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5")) +
@@ -1057,7 +1058,12 @@ EA_LHS <- plot_grid(
 
 ggsave(here::here("Plots","EA_LHS.png"), plot = EA_LHS, width = 11.5, height = 6.5, dpi = 600)
   
-ggsave(here::here("Plots","Bubble_LHS.png"), plot = plot_LHS + fig_theme + theme(legend.position = "none"), width = 4, height = 4, dpi = 600)  
+ggsave(here::here("Plots","Bubble_LHS.png"), plot = plot_LHS + fig_theme + theme(legend.position = "none", axis.title.x = element_blank()), width = 4, height = 4, dpi = 600)  
+  
+  
+Bubble_together <- plot_grid(plot_LHS + fig_theme + theme(legend.position = "none", axis.title.x = element_blank()),
+  plot_TP + fig_theme + theme(legend.position = "none"), ncol = 1, align = "v", rel_heights = c(1, 1.1))  
+ggsave(here::here("Plots","Bubble_LHSTP.png"), plot = Bubble_together, width = 4, height = 8, dpi = 600)  
 ```
 ![Enrichment analysis: Life hisotry stage](Plots/EA_LHS.png)
 
