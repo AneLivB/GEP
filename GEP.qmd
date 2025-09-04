@@ -900,6 +900,8 @@ GO_LHS_UP <- enrichGO(Upregulated_lhs$GeneSymbol,
                        pAdjustMethod = "BH") 
 GO_LHS_UP <- GO_LHS_UP %>%
   mutate(Regulation = "Upregulated") 
+
+
 ```
 
 ## Top 20 enriched GOterms (biological process) 
@@ -910,6 +912,8 @@ GO_LHS_UP <- GO_LHS_UP %>%
 #Combine
 GO_TP <- rbind(as.data.frame(GO_TP_DOWN), as.data.frame(GO_TP_UP)) %>%
   arrange(p.adjust) 
+table(GO_TP$Regulation)
+table(GO_LHS$Regulation)
 
 #Identify top20
 GO_TP_Top20 <- GO_TP %>%
@@ -1270,7 +1274,7 @@ parent_colors <- c(
 # Function to generate semantic similarity scatter plot
 plot_semantic_similarity <- function(simMatrix, reducedTerms, title_text, 
                                      parent_colors, xlim_val = c(-1, 1), ylim_val = c(-1, 1),
-                                     point_alpha = 0.5, point_range = c(0, 20), label_size = 2.42,
+                                     point_alpha = 0.5, point_range = c(0, 20), label_size = 2.45,
                                      top_n = NULL, min_score = NULL, box_padding = 0.09) {
   
   # 1. Distance matrix
@@ -1340,9 +1344,9 @@ label_data <- df %>%
 # Example usage for your four datasets
 
 SP_GO_TP_UP   <- plot_semantic_similarity(SM_GO_TP_UP, reduced_TP_UP, 
-                                          "(c) Upregulated on day 60", parent_colors)
+                                          "(d) Upregulated on day 60", parent_colors)
 SP_GO_TP_DOWN <- plot_semantic_similarity(SM_GO_TP_DOWN, reduced_TP_DOWN, 
-                                          "(d) Downregulated on day 60", parent_colors)
+                                          "(c) Downregulated on day 60", parent_colors)
 SP_GO_LHS_UP  <- plot_semantic_similarity(SM_GO_LHS_UP, reduced_LHS_UP, 
                                           "(a) Upregulated in mothers", parent_colors)
 parent_colors <- c(
@@ -1359,8 +1363,9 @@ SP_GO_LHS_DOWN <- plot_semantic_similarity(SM_GO_LHS_DOWN, reduced_LHS_DOWN,
 SP_LHS_GO <- plot_grid(SP_GO_LHS_UP + 
                         theme(axis.title.x = element_blank()) + fig_theme, 
                       SP_GO_LHS_DOWN + fig_theme + theme(axis.title = element_blank()), rel_widths = c(1.05, 1))
-SP_TP_GO <- plot_grid(SP_GO_TP_UP + fig_theme, 
-                       SP_GO_TP_DOWN + fig_theme + theme(axis.title.y = element_blank()), ncol = 2, rel_widths = c(1.05, 1))  
+SP_TP_GO <- plot_grid(SP_GO_TP_DOWN + fig_theme, 
+                       SP_GO_TP_UP + fig_theme + coord_cartesian(clip = "off") + theme(axis.title.y = element_blank(),
+  plot.margin = margin(5, 10, 5, 5)), ncol = 2, rel_widths = c(1.05, 1))  
   
 combined_SP <- plot_grid(SP_LHS_GO, SP_TP_GO, ncol = 1)
 ggsave(here::here("Plots","combined_SP.png"), plot = combined_SP, width = 7, height = 7, dpi = 600)
