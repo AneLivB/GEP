@@ -63,13 +63,35 @@ invisible(pacman::p_load(dplyr, readxl, tidyverse, cowplot, edgeR, DESeq2, RColo
 #Load in the filtered data
 #Mutate all needed predictors into factors
 d_n<-readRDS("rnaseq_filtered_Liv.Rdata")  
-d_n$samples$life_history_stage <- as.factor(d_n$samples$life_history_stage)
-d_n$samples$colony <- as.factor(d_n$samples$colony)
-d_n$samples$ID <- as.factor(d_n$samples$ID)
-d_n$samples$year <- as.factor(d_n$samples$year)
-d_n$samples$group <- as.factor(d_n$samples$group)
-d_n$samples$pair <- as.factor(d_n$samples$pair)
 #dim(d_n) 12639 rows
+## White blood counts
+WBC <- read_excel("WBCcounts_GEP.xlsx")
+
+##Combined
+d_n$samples <- left_join(d_n$samples, WBC, by = "Sample")
+head(d_n$samples)
+d_n$samples$Diff_Neutro <- as.numeric(d_n$samples$Diff_Neutro)
+d_n$samples$Diff_Eo <- as.numeric(d_n$samples$Diff_Eo)
+d_n$samples$Diff_Baso <- as.numeric(d_n$samples$Diff_Baso)
+d_n$samples$Diff_Mono <- as.numeric(d_n$samples$Diff_Mono)
+d_n$samples$Diff_Lympho <- as.numeric(d_n$samples$Diff_Lympho)
+rm(WBC)
+
+d_n$samples$WBC_ratio <- ((d_n$samples$Diff_Neutro + d_n$samples$Diff_Eo + d_n$samples$Diff_Baso + d_n$samples$Diff_Mono)/d_n$samples$Diff_Lympho)
+d_n$samples$WBC_ratio_log <- log(d_n$samples$WBC_ratio)
+
+#Remove incomplete 
+complete <- complete.cases(d_n$samples[, "WBC_ratio_log"])
+d_n_WBC <- d_n[, complete]
+rm(complete)
+
+d_n_WBC$samples$life_history_stage <- as.factor(d_n_WBC$samples$life_history_stage)
+d_n_WBC$samples$colony <- as.factor(d_n_WBC$samples$colony)
+d_n_WBC$samples$ID <- as.factor(d_n_WBC$samples$ID)
+d_n_WBC$samples$year <- as.factor(d_n_WBC$samples$year)
+d_n_WBC$samples$group <- as.factor(d_n_WBC$samples$group)
+d_n_WBC$samples$pair <- as.factor(d_n_WBC$samples$pair)
+rm(d_n)
 ```
 
 # PCA
@@ -81,7 +103,7 @@ Create a PCA plot to identify outliers.
 #| echo: FALSE
 #| message: false
 #Use PCA to identify outliers. F24_FWB_mum_start_2018B was already removed at an earlier state
-cpm_mat <- cpm(d_n, log=TRUE)  #we need the log values
+cpm_mat <- cpm(d_n_WBC, log=TRUE)  #we need the log values
 exprs_mat <- cpm_mat
 exprs_t <- t(exprs_mat) #transpose
 pca_result <- prcomp(exprs_t, center = TRUE, scale. = TRUE)
@@ -91,8 +113,8 @@ pca_var_explained <- pca_var / sum(pca_var)
 round(pca_var_explained[1:2] * 100, 2)
 
 pc_scores <- as.data.frame(pca_result$x[, 1:2])  #keep PC1 and PC2
-pc_scores$SampleID <- rownames(pc_scores)
-pc_scores <- cbind(pc_scores, d_n$samples[match(pc_scores$SampleID, rownames(d_n$samples)), ])
+pc_scores$Sample <- rownames(pc_scores)
+pc_scores <- left_join(pc_scores, d_n_WBC$samples, by = "Sample")
 
 PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage)) +
   geom_point(size = 2) +
@@ -100,7 +122,7 @@ PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage)) 
   stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "(c) Life history stage", x = "PC1 (24 %)", y = "PC2 (12 %)", color = NULL)
+  labs(title = "(c) Life history stage", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
 
 #levels(pc_scores$year)
 levels(pc_scores$year) <- c("2019", "2020")
@@ -110,7 +132,7 @@ PCA_Y <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = year)) +
   stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "(b) Season", x = "PC1 (24 %)", y = "PC2 (12 %)", color = NULL)
+  labs(title = "(b) Season", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
 
 #levels(pc_scores$group)
 levels(pc_scores$group) <- c("Day 0", "Day 60")
@@ -120,7 +142,7 @@ PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group)) +
   stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "(d) Time point", x = "PC1 (24 %)", y = "PC2 (12 %)", color = NULL)
+  labs(title = "(d) Time point", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
 
 PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
   geom_point(size = 2) +
@@ -128,7 +150,7 @@ PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
   stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "(a) Colony", x = "PC1 (24 %)", y = "PC2 (12 %)", color = NULL)
+  labs(title = "(a) Colony", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
 
 legend_theme_outlier <- theme(
     legend.position = c(0.05, 0.95), 
@@ -143,27 +165,9 @@ PCA_plots_outlier <- plot_grid(PCA_C + legend_theme_outlier + theme(axis.title.x
                                PCA_LHS + legend_theme_outlier, 
                                PCA_TP + legend_theme_outlier + theme(axis.title.y = element_blank()), 
                                ncol = 2)
-ggsave(here::here("Plots","PCA_plots_outlier.png"), plot = PCA_plots_outlier, dpi = 600)
-#The PCA identifies F6_FWB_mum_start_2018B as an outlier
+ggsave(here::here("Plots","PCA_plots_outlier_adj.png"), plot = PCA_plots_outlier, dpi = 600)
 
-#Remove F6_FWB_mum_start_2018B and redo the PCA plots
-d_n <- d_n[, d_n$samples$Sample != "F6_FWB_mum_start_2018B"]
-
-#Re do the PCA analysis
-cpm_mat <- cpm(d_n, log=TRUE)  #we need the log values
-exprs_mat <- cpm_mat
-exprs_t <- t(exprs_mat) #transpose
-pca_result <- prcomp(exprs_t, center = TRUE, scale. = TRUE)
-dim(d_n)
-pca_var <- pca_result$sdev^2                  
-pca_var_explained <- pca_var / sum(pca_var)   
-round(pca_var_explained[1:2] * 100, 2)
-
-pc_scores <- as.data.frame(pca_result$x[, 1:2])  #keep PC1 and PC2
-pc_scores$SampleID <- rownames(pc_scores)
-pc_scores <- cbind(pc_scores, d_n$samples[match(pc_scores$SampleID, rownames(d_n$samples)), ])
-
-write.csv(pc_scores, file = here::here("GenesGO", "pc_scores.csv"))
+write.csv(pc_scores, file = here::here("GenesGO", "pc_scores_adj.csv"))
 rm(exprs_mat, exprs_t, cpm_mat)
 ```
 
@@ -228,7 +232,7 @@ PCA_plots <- plot_grid(PCA_C + legend_theme + theme(axis.title.x = element_blank
                        PCA_TP + legend_theme + theme(axis.title.y = element_blank()),
                        ncol = 2)
 
-ggsave(here::here("Plots","PCA_plots.png"), plot = PCA_plots, dpi = 600)
+ggsave(here::here("Plots","PCA_plots_adj.png"), plot = PCA_plots, dpi = 600)
 rm(PCA_LHS, PCA_TP, PCA_Y, PCA_C)
 ```
 
@@ -253,7 +257,7 @@ summary_short<- summary_short %>%
   summarise(count= n(), .groups = "drop")
 rownames(summary_short) <- NULL
 summary_short <- kable(summary_short) %>% kable_styling("striped")
-kableExtra::save_kable(summary_short, file = "table_short.pdf")
+kableExtra::save_kable(summary_short, file = "table_short_adj.pdf")
 summary_short
 ```
 
@@ -262,11 +266,11 @@ summary_short
 ```{r}
 #| label: visualize_data
 #| echo: FALSE
-counts_per_million <- cpm(d_n)
-log_counts_per_million <- cpm(d_n, log = T)
+counts_per_million <- cpm(d_n_WBC)
+log_counts_per_million <- cpm(d_n_WBC, log = T)
 #Calculate mean and median value
-L <- mean(d_n$samples$lib.size) * 1e-6 #average library size in millions
-M <- median(d_n$samples$lib.size) * 1e-6 
+L <- mean(d_n_WBC$samples$lib.size) * 1e-6 #average library size in millions
+M <- median(d_n_WBC$samples$lib.size) * 1e-6 
 #c(L, M) #19.72712, 19.11033
 lcpm.cutoff <- log2(10/M + 2/L) #-0.678856
 
@@ -289,13 +293,13 @@ density_plot <- ggplot(df_melted, aes(x = LogCPM, color = Sample)) +
 #density_plot
 
 # Save the density plot as a PNG file
-ggsave(here::here("Plots","density_plot.png"), plot = density_plot, width = 12, height = 8, dpi = 600)
+ggsave(here::here("Plots","density_plot_adj.png"), plot = density_plot, width = 12, height = 8, dpi = 600)
 
 #Remove elements not used in the rest of the script
 rm(counts_per_million, density_plot, df_long, df_melted, log_counts_per_million, L, M, lcpm.cutoff, palette_200)
 ```
 
-![Gene count density plot](Plots/density_plot.png)
+![Gene count density plot](Plots/density_plot_adj.png)
 
 # Differential gene expression analysis
 
@@ -327,7 +331,7 @@ BS assessed differential expression per gene between the two time points (start 
 #| label: DEG_Time_point
 #| echo: FALSE
 #-------------- ANALYSIS OF TIME POINT --------------##
-design <- model.matrix(~ -1 + group, data = d_n$samples) #setting up model contrasts is more straight forward in the absence of an intercept for timepoint
+design <- model.matrix(~ -1 + group, data = d_n_WBC$samples) #setting up model contrasts is more straight forward in the absence of an intercept for timepoint
 contr.matrix <- makeContrasts(
  end_vs_start = group2-group1,
  levels = colnames(design)) #create matrix for contrasts
@@ -335,18 +339,18 @@ contr.matrix <- makeContrasts(
 # voom converts raw counts to log-CPM values by automatically extracting library sizes and normalisation factors from d itself.
 #  If filtering of lowly-expressed genes is insufficient, a drop in variance levels can be observed at the low end of the expression scale due to very small counts.
 #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-vobj_tp <- voom(d_n, design, plot=TRUE)
+vobj_tp <- voom(d_n_WBC, design, plot=TRUE)
 # 
 # # Fit a random effect
-dupcor_tp <- duplicateCorrelation(vobj_tp, design, block = d_n$samples$ID)
-dupcor_tp$consensus #the estimated intra individual correlation (0.3115568)
+dupcor_tp <- duplicateCorrelation(vobj_tp, design, block = d_n_WBC$samples$ID)
+dupcor_tp$consensus #the estimated intra individual correlation (0.3077411)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
-vobj = voom(d_n, design, plot=TRUE,
-            block=d_n$samples$ID, correlation=dupcor_tp$consensus)
+vobj = voom(d_n_WBC, design, plot=TRUE,
+            block=d_n_WBC$samples$ID, correlation=dupcor_tp$consensus)
 #update the correlation for the new voom weights
-dupcor_tp <- duplicateCorrelation(vobj, design, block = d_n$samples$ID)
-dupcor_tp$consensus #the estimated intra individual correlation (0.3114605)
+dupcor_tp <- duplicateCorrelation(vobj, design, block = d_n_WBC$samples$ID)
+dupcor_tp$consensus #the estimated intra individual correlation (0.3076259)
 # # 
 # #Fit the model
 # # analyzing repeated measures data using duplicateCorrelation.
@@ -354,15 +358,15 @@ dupcor_tp$consensus #the estimated intra individual correlation (0.3114605)
 # # Estimate linear mixed model with a single variance component
 # # Fit the model for each gene
 # # But this step uses only the genome-wide average for the random effect
-vfit_tp <- lmFit(vobj, design, block=d_n$samples$ID, correlation=dupcor_tp$consensus)
+vfit_tp <- lmFit(vobj, design, block=d_n_WBC$samples$ID, correlation=dupcor_tp$consensus)
 vfit_tp <- contrasts.fit(vfit_tp, contrasts=contr.matrix)
 # 
 # Save the model to avoid recomputing everything
 # save vfit_tp
-saveRDS(vfit_tp, file = here::here("Models","vfit_tp.rds"))
+saveRDS(vfit_tp, file = here::here("Models","vfit_tp_WBC.rds"))
 
 #Load vfit_tp
-vfit_tp <- readRDS(here::here("Models","vfit_tp.rds"))
+vfit_tp <- readRDS(here::here("Models","vfit_tp_WBC.rds"))
 
 # Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
 efit <- eBayes(vfit_tp)
@@ -387,15 +391,15 @@ dt <- decideTests(tfit, adjust.method="fdr")
 summary(dt) 
 
 #Test for significance
-Allgenes_tp <- as.data.frame(topTreat(tfit, n=nrow(tfit)))
-Filteredgenes_tp <- subset(Allgenes_tp, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
-Upregulated_tp <-subset(Filteredgenes_tp, Filteredgenes_tp$logFC >= lfc)
-Downregulated_tp <-subset(Filteredgenes_tp, Filteredgenes_tp$logFC <= -lfc)
-nrow(subset(Filteredgenes_tp, Filteredgenes_tp$logFC > 0))
-nrow(subset(Filteredgenes_tp, Filteredgenes_tp$logFC < 0))
+Allgenes_tp_WBC <- as.data.frame(topTreat(tfit, n=nrow(tfit)))
+Filteredgenes_tp_WBC <- subset(Allgenes_tp_WBC, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
+Upregulated_tp_WBC <-subset(Filteredgenes_tp_WBC, Filteredgenes_tp_WBC$logFC >= lfc)
+Downregulated_tp_WBC <-subset(Filteredgenes_tp_WBC, Filteredgenes_tp_WBC$logFC <= -lfc)
+nrow(subset(Filteredgenes_tp_WBC, Filteredgenes_tp_WBC$logFC > 0))
+nrow(subset(Filteredgenes_tp_WBC, Filteredgenes_tp_WBC$logFC < 0))
 
 # Create a list to save the up and down regulated genes and the df containing all genes evaluated for GO analysis
-tp_list <- list(All_tp = Allgenes_tp, Upregulated_tp = Upregulated_tp, Downregulated_tp = Downregulated_tp)
+tp_list <- list(All_tp_WBC = Allgenes_tp_WBC, Upregulated_tp_WBC = Upregulated_tp_WBC, Downregulated_tp_WBC = Downregulated_tp_WBC)
 
 # Loop through and save each data frame using `here()`
 for (name in names(tp_list)) {
@@ -403,13 +407,13 @@ for (name in names(tp_list)) {
 }
 
 #Significance
-Allgenes_tp$Significance <- "Not significant"
-Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC >= lfc] <- "Upregulated"
-Allgenes_tp$Significance[Allgenes_tp$adj.P.Val < adj.P.value & Allgenes_tp$logFC <= -lfc] <- "Downregulated"
-Allgenes_tp
+Allgenes_tp_WBC$Significance <- "Not significant"
+Allgenes_tp_WBC$Significance[Allgenes_tp_WBC$adj.P.Val < adj.P.value & Allgenes_tp_WBC$logFC >= lfc] <- "Upregulated"
+Allgenes_tp_WBC$Significance[Allgenes_tp_WBC$adj.P.Val < adj.P.value & Allgenes_tp_WBC$logFC <= -lfc] <- "Downregulated"
+Allgenes_tp_WBC
 
 #Plot volcano plot
-tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(adj.P.Val), color = Significance, size = Significance)) +
+tp_plot <- ggplot(Allgenes_tp_WBC, aes(x = logFC, y = -log10(adj.P.Val), color = Significance, size = Significance)) +
   geom_hline(yintercept = -log10(0.05), col = "gray", linetype = 'dashed') +
   geom_vline(xintercept = c(-1, 1), col = "gray", linetype = 'dashed') +
   geom_point() +
@@ -424,6 +428,105 @@ tp_plot <- ggplot(Allgenes_tp, aes(x = logFC, y = -log10(adj.P.Val), color = Sig
     plot.title.position = "plot")
 ```
 
+### Adjusted TP
+
+```{r}
+#| label: DEG_Time_point
+#| echo: FALSE
+#-------------- ANALYSIS OF TIME POINT --------------##
+design_adj <- model.matrix(~ -1 + group + WBC_ratio_log, data = d_n_WBC$samples) 
+nrow(design_adj)
+
+
+contr.matrix_adj <- makeContrasts(
+ end_vs_start = group2-group1,
+ levels = colnames(design_adj)) #create matrix for contrasts
+# Use voom to remove variance dependency on mean,
+#voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
+vobj_tp_adj <- voom(d_n_WBC, design_adj, plot=TRUE)
+# 
+# # Fit a random effect
+dupcor_tp_adj <- duplicateCorrelation(vobj_tp_adj, design_adj, block = d_n_WBC$samples$ID)
+dupcor_tp_adj$consensus #the estimated intra individual correlation (0.2974413)
+# #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
+vobj_adj = voom(d_n_WBC, design_adj, plot=TRUE,
+            block=d_n_WBC$samples$ID, correlation=dupcor_tp_adj$consensus)
+#update the correlation for the new voom weights
+dupcor_tp_adj <- duplicateCorrelation(vobj_adj, design_adj, block = d_n_WBC$samples$ID)
+dupcor_tp_adj$consensus #the estimated intra individual correlation (0.2973111)
+# # 
+# #Fit the model
+# # analyzing repeated measures data using duplicateCorrelation.
+# # The model forces the magnitude of the random effect to be the same across all genes.
+# # Estimate linear mixed model with a single variance component
+# # Fit the model for each gene
+# # But this step uses only the genome-wide average for the random effect
+vfit_tp_adj <- lmFit(vobj_adj, design_adj, block=d_n_WBC$samples$ID, correlation=dupcor_tp_adj$consensus)
+vfit_tp_adj <- contrasts.fit(vfit_tp_adj, contrasts=contr.matrix_adj)
+# 
+# Save the model to avoid recomputing everything
+# save vfit_tp
+saveRDS(vfit_tp_adj, file = here::here("Models","vfit_tp_adj.rds"))
+
+#Load vfit_tp
+vfit_tp_adj <- readRDS(here::here("Models","vfit_tp_adj.rds"))
+
+efit_adj <- eBayes(vfit_tp_adj)
+topTable(efit_adj, n=20)
+plotSA(efit_adj, main="Final model: Mean-variance trend")
+plotMD(efit_adj)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit_adj$F
+head(efit_adj$F.p.value) 
+head(efit_adj$p.value) 
+summary(decideTests(efit_adj, adjust.method="fdr"))
+
+tfit_adj <- treat(vfit_tp_adj, lfc=lfc) #lfc = 1, lfc_half = 0.5
+topTreat(tfit_adj)
+nrow(tfit_adj)
+dt_adj <- decideTests(tfit_adj, adjust.method="fdr")
+summary(dt_adj) 
+
+#Test for significance
+Allgenes_tp_adj <- as.data.frame(topTreat(tfit_adj, n=nrow(tfit_adj)))
+Filteredgenes_tp_adj <- subset(Allgenes_tp_adj, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
+Upregulated_tp_adj <-subset(Filteredgenes_tp_adj, Filteredgenes_tp_adj$logFC >= lfc)
+Downregulated_tp_adj <-subset(Filteredgenes_tp_adj, Filteredgenes_tp_adj$logFC <= -lfc)
+nrow(subset(Filteredgenes_tp_adj, Filteredgenes_tp_adj$logFC > 0))
+nrow(subset(Filteredgenes_tp_adj, Filteredgenes_tp_adj$logFC < 0))
+
+# Create a list to save the up and down regulated genes and the df containing all genes evaluated for GO analysis
+tp_list_adj <- list(All_tp_adj = Allgenes_tp_adj, Upregulated_tp_adj = Upregulated_tp_adj, Downregulated_tp_adj = Downregulated_tp_adj)
+
+# Loop through and save each data frame using `here()`
+for (name in names(tp_list_adj)) {
+  write.csv(tp_list_adj[[name]], file = here::here("GenesGO", paste0(name, ".csv")), row.names = TRUE)
+}
+
+#Significance
+Allgenes_tp_adj$Significance <- "Not significant"
+Allgenes_tp_adj$Significance[Allgenes_tp_adj$adj.P.Val < adj.P.value & Allgenes_tp_adj$logFC >= lfc] <- "Upregulated"
+Allgenes_tp_adj$Significance[Allgenes_tp_adj$adj.P.Val < adj.P.value & Allgenes_tp_adj$logFC <= -lfc] <- "Downregulated"
+Allgenes_tp_adj
+
+#Plot volcano plot
+tp_plot_adj <- ggplot(Allgenes_tp_adj, aes(x = logFC, y = -log10(adj.P.Val), color = Significance, size = Significance)) +
+  geom_hline(yintercept = -log10(0.05), col = "gray", linetype = 'dashed') +
+  geom_vline(xintercept = c(-1, 1), col = "gray", linetype = 'dashed') +
+  geom_point() +
+  scale_color_manual(values = clrs) +  
+  scale_size_manual(values = c(1, 0.5, 1)) +
+  labs(title = "(b) Time point", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
+  theme_classic() +
+  ylim(0,45) +
+  xlim(-4.2,4.2) +
+  theme(
+    legend.position = "bottom",
+    plot.title.position = "plot")
+```
+Correcting for the white blood cell ratio does slightly change the differentially expressed genes, so we'll retain both and compare them moving forward. 
 ### Heatmap
 
 Creating a heatmap to visualise the differentially expressed genes between the two start points.
@@ -432,14 +535,14 @@ Creating a heatmap to visualise the differentially expressed genes between the t
 #| label: Heatmap_tp
 #| echo: FALSE
 #Create heatmap for differentially expressed genes between time points
-DEG_tp <- rownames(Filteredgenes_tp)
+DEG_tp <- rownames(Filteredgenes_tp_WBC)
 
 #Extract the expression values for the differentially expressed genes
 expression_tp <- vobj$E[DEG_tp, ]
 
 #get labels
-annotation <- data.frame(TP = as.factor(d_n$samples$group))
-rownames(annotation) <- d_n$samples$Sample
+annotation <- data.frame(TP = as.factor(d_n_WBC$samples$group))
+rownames(annotation) <- d_n_WBC$samples$Sample
 annotation$TP <- ifelse(annotation$TP == 1, "Day 0", "Day 60")
 annotation$TP <- factor(annotation$TP, levels = c("Day 0", "Day 60"))
 
@@ -464,7 +567,43 @@ heatmap_tp <- pheatmap(matrix_tp,
                        fontsize_row = 6,
                        main = NA)
 
-ggsave(here::here("Plots","heatmap_tp.png"), plot = heatmap_tp, width = 3.5, height = 5, dpi = 600)
+ggsave(here::here("Plots","heatmap_tp_WBC.png"), plot = heatmap_tp, width = 3.5, height = 5, dpi = 600)
+
+
+###Adjusted
+DEG_tp_adj <- rownames(Filteredgenes_tp_adj)
+
+#Extract the expression values for the differentially expressed genes
+expression_tp_adj <- vobj$E[DEG_tp_adj, ]
+
+#get labels
+annotation_adj <- data.frame(TP = as.factor(d_n_WBC$samples$group))
+rownames(annotation_adj) <- d_n_WBC$samples$Sample
+annotation_adj$TP <- ifelse(annotation_adj$TP == 1, "Day 0", "Day 60")
+annotation_adj$TP <- factor(annotation_adj$TP, levels = c("Day 0", "Day 60"))
+
+matrix_tp_adj <- expression_tp_adj[, order(annotation_adj$TP)]
+annotation_tp_adj <- annotation_adj[order(annotation_adj$TP), , drop = FALSE]
+
+heatmap_tp_adj <- pheatmap(matrix_tp_adj,
+                       scale = "row",  # normalize rows (genes)
+                       color = colorRampPalette(c("#9D00FF", "white", "#FFA500"))(100),
+                       annotation_colors = ann_colors,
+                       annotation_col = annotation_tp_adj,
+                       cluster_rows = TRUE,
+                       treeheight_row = 0,
+                       cluster_cols = FALSE,
+                       gaps_col = cumsum(table(annotation_tp_adj$TP)),
+                       show_rownames = F,
+                       show_colnames = FALSE,
+                       annotation_legend = FALSE,
+                       legend = F,
+                       fontsize = 12,
+                       fontsize_col = 7,
+                       fontsize_row = 6,
+                       main = NA)
+
+ggsave(here::here("Plots","heatmap_tp_adj.png"), plot = heatmap_tp_adj, width = 3.5, height = 5, dpi = 600)
 ```
 
 ![Heatmap: Time point](Plots/heatmap_tp.png)
@@ -478,7 +617,7 @@ Analysis performed by ALB using the framework outlined by BS.
 #| echo: FALSE
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 #Create a design matrix
-design_lhs <- model.matrix(~ -1 + life_history_stage, data = d_n$samples) #model contrasts without intercept is easier
+design_lhs <- model.matrix(~ -1 + life_history_stage, data = d_n_WBC$samples) #model contrasts without intercept is easier
 colnames(design_lhs) <- gsub("life_history_stage", "", colnames(design_lhs)) #clean group names
 
 #create matrix for contrasts
@@ -487,31 +626,31 @@ contr.matrix.lhs <- makeContrasts(
  levels = colnames(design_lhs))
 
 #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-vobj_lhs <- voom(d_n, design_lhs, plot=TRUE)
+vobj_lhs <- voom(d_n_WBC, design_lhs, plot=TRUE)
 # 
 # Fit a random effect
-dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
+dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n_WBC$samples$ID)
 dupcor_lhs$consensus #the estimated intra individual correlation (0.1362346)
 # 
-vobj_lhs = voom(d_n, design_lhs, plot=TRUE,
-         block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
+vobj_lhs = voom(d_n_WBC, design_lhs, plot=TRUE,
+         block=d_n_WBC$samples$ID, correlation=dupcor_lhs$consensus)
 #update the correlation for the new voom weights
-dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n$samples$ID)
+dupcor_lhs <- duplicateCorrelation(vobj_lhs, design_lhs, block = d_n_WBC$samples$ID)
 dupcor_lhs$consensus #the estimated intra individual correlation (0.1362741)
 #Analyzing repeated measures data using duplicateCorrelation.
 #The model forces the magnitude of the random effect to be the same across all genes.
 
 
 #Estimate linear mixed model with a single variance component
-vfit_lhs <- lmFit(vobj_lhs, design_lhs, block=d_n$samples$ID, correlation=dupcor_lhs$consensus)
+vfit_lhs <- lmFit(vobj_lhs, design_lhs, block=d_n_WBC$samples$ID, correlation=dupcor_lhs$consensus)
 vfit_lhs <- contrasts.fit(vfit_lhs, contrasts=contr.matrix.lhs)
 
 #Save the model to avoid recomputing everything
 # #save vfit_lhs
-# saveRDS(vfit_lhs, file = here::here("Models","vfit_lhs.rds"))
+saveRDS(vfit_lhs, file = here::here("Models","vfit_lhs_WBC.rds"))
 
 #Load vfit_lhs
-vfit_lhs <- readRDS(here::here("Models","vfit_lhs.rds"))
+vfit_lhs <- readRDS(here::here("Models","vfit_lhs_WBC.rds"))
 
 # Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
 efit_lhs <- eBayes(vfit_lhs)
@@ -536,15 +675,15 @@ dt_lhs <- decideTests(tfit_lhs, adjust.method="fdr")
 summary(dt_lhs) 
 
 #Test for significance
-Allgenes_lhs <- as.data.frame(topTreat(tfit_lhs, n=nrow(tfit_lhs)))
-Filteredgenes_lhs <- subset(Allgenes_lhs, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
-Upregulated_lhs <-subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC >= lfc)
-Downregulated_lhs <-subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC <= -lfc)
-nrow(subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC > 0))
-nrow(subset(Filteredgenes_lhs, Filteredgenes_lhs$logFC < 0))
+Allgenes_lhs_WBC <- as.data.frame(topTreat(tfit_lhs, n=nrow(tfit_lhs)))
+Filteredgenes_lhs_WBC <- subset(Allgenes_lhs_WBC, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
+Upregulated_lhs_WBC <-subset(Filteredgenes_lhs_WBC, Filteredgenes_lhs_WBC$logFC >= lfc)
+Downregulated_lhs_WBC <-subset(Filteredgenes_lhs_WBC, Filteredgenes_lhs_WBC$logFC <= -lfc)
+nrow(subset(Filteredgenes_lhs_WBC, Filteredgenes_lhs_WBC$logFC > 0))
+nrow(subset(Filteredgenes_lhs_WBC, Filteredgenes_lhs_WBC$logFC < 0))
 
 # Create a list to save the up and down regulated genes and the df containing all genes evaluated for GO analysis
-lhs_list <- list(All_lhs = Allgenes_lhs, Upregulated_lhs = Upregulated_lhs, Downregulated_lhs = Downregulated_lhs)
+lhs_list <- list(All_lhs_WBC = Allgenes_lhs_WBC, Upregulated_lhs_WBC = Upregulated_lhs_WBC, Downregulated_lhs_WBC = Downregulated_lhs_WBC)
 
 # Loop through and save each data frame using `here()`
 for (name in names(lhs_list)) {
@@ -553,12 +692,12 @@ for (name in names(lhs_list)) {
 
 
 #Significance
-Allgenes_lhs$Significance <- "Not significant"
-Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC >= lfc] <- "Upregulated"
-Allgenes_lhs$Significance[Allgenes_lhs$adj.P.Val < adj.P.value & Allgenes_lhs$logFC <= -lfc] <- "Downregulated"
+Allgenes_lhs_WBC$Significance <- "Not significant"
+Allgenes_lhs_WBC$Significance[Allgenes_lhs_WBC$adj.P.Val < adj.P.value & Allgenes_lhs_WBC$logFC >= lfc] <- "Upregulated"
+Allgenes_lhs_WBC$Significance[Allgenes_lhs_WBC$adj.P.Val < adj.P.value & Allgenes_lhs_WBC$logFC <= -lfc] <- "Downregulated"
 
 #Plot DEG volcano plot
-lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(adj.P.Val), color = Significance, size = Significance)) +
+lhs_plot <- ggplot(Allgenes_lhs_WBC, aes(x = logFC, y = -log10(adj.P.Val), color = Significance, size = Significance)) +
   geom_hline(yintercept = -log10(0.05), col = "gray", linetype = 'dashed') +
   geom_vline(xintercept = c(-1, 1), col = "gray", linetype = 'dashed') +
   geom_point() +
@@ -573,6 +712,108 @@ lhs_plot <- ggplot(Allgenes_lhs, aes(x = logFC, y = -log10(adj.P.Val), color = S
     plot.title.position = "plot")
 ```
 
+### Adjusted LHS
+
+```{r}
+#| label: DEG_LHS
+#| echo: FALSE
+#Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
+#Create a design matrix
+design_lhs_adj <- model.matrix(~ -1 + life_history_stage + WBC_ratio_log, data = d_n_WBC$samples) #model contrasts without intercept is easier
+colnames(design_lhs_adj) <- gsub("life_history_stage", "", colnames(design_lhs_adj)) #clean group names
+
+#create matrix for contrasts
+contr.matrix.lhs_adj <- makeContrasts(
+ adultvspup = Mother-Pup,
+ levels = colnames(design_lhs_adj))
+
+#voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
+vobj_lhs_adj <- voom(d_n_WBC, design_lhs_adj, plot=TRUE)
+# 
+# Fit a random effect
+dupcor_lhs_adj <- duplicateCorrelation(vobj_lhs_adj, design_lhs_adj, block = d_n_WBC$samples$ID)
+dupcor_lhs_adj$consensus #the estimated intra individual correlation (0.1304513)
+# 
+vobj_lhs_adj = voom(d_n_WBC, design_lhs_adj, plot=TRUE,
+         block=d_n_WBC$samples$ID, correlation=dupcor_lhs_adj$consensus)
+#update the correlation for the new voom weights
+dupcor_lhs_adj <- duplicateCorrelation(vobj_lhs_adj, design_lhs_adj, block = d_n_WBC$samples$ID)
+dupcor_lhs_adj$consensus #the estimated intra individual correlation (0.1305059)
+#Analyzing repeated measures data using duplicateCorrelation.
+#The model forces the magnitude of the random effect to be the same across all genes.
+
+
+#Estimate linear mixed model with a single variance component
+vfit_lhs_adj <- lmFit(vobj_lhs_adj, design_lhs_adj, block=d_n_WBC$samples$ID, correlation=dupcor_lhs_adj$consensus)
+vfit_lhs_adj <- contrasts.fit(vfit_lhs_adj, contrasts=contr.matrix.lhs_adj)
+
+#Save the model to avoid recomputing everything
+# #save vfit_lhs
+saveRDS(vfit_lhs_adj, file = here::here("Models","vfit_lhs_adj.rds"))
+
+#Load vfit_lhs
+vfit_lhs_adj <- readRDS(here::here("Models","vfit_lhs_adj.rds"))
+
+# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
+efit_lhs_adj <- eBayes(vfit_lhs_adj)
+topTable(efit_lhs_adj, n=20)
+plotSA(efit_lhs_adj, main="Final model: Mean-variance trend")
+plotMD(efit_lhs_adj)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit_lhs_adj$F
+#head(efit_lhs$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
+#head(efit_lhs$p.value) #same
+summary(decideTests(efit_lhs_adj, adjust.method="fdr"))
+#set log-fold-changes (log-FCs) to be above a minimum value. The treat method (McCarthy and Smyth 2009) used to calculate p-values from empirical Bayes moderated t-statistics with a minimum log-FC requirement. 
+#no need to use the ebayes output for this
+
+#Positive values means the gene is more expressed
+tfit_lhs_adj <- treat(vfit_lhs_adj, lfc=lfc) 
+topTreat(tfit_lhs_adj)
+nrow(tfit_lhs_adj)
+dt_lhs_adj <- decideTests(tfit_lhs_adj, adjust.method="fdr")
+summary(dt_lhs_adj) 
+
+#Test for significance
+Allgenes_lhs_adj <- as.data.frame(topTreat(tfit_lhs_adj, n=nrow(tfit_lhs)))
+Filteredgenes_lhs_adj <- subset(Allgenes_lhs_adj, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
+Upregulated_lhs_adj <-subset(Filteredgenes_lhs_adj, Filteredgenes_lhs_adj$logFC >= lfc)
+Downregulated_lhs_adj <-subset(Filteredgenes_lhs_adj, Filteredgenes_lhs_adj$logFC <= -lfc)
+nrow(subset(Filteredgenes_lhs_adj, Filteredgenes_lhs_adj$logFC > 0))
+nrow(subset(Filteredgenes_lhs_adj, Filteredgenes_lhs_adj$logFC < 0))
+
+# Create a list to save the up and down regulated genes and the df containing all genes evaluated for GO analysis
+lhs_list_adj <- list(All_lhs_adj = Allgenes_lhs_adj, Upregulated_lhs_adj = Upregulated_lhs_adj, Downregulated_lhs_adj = Downregulated_lhs_adj)
+
+# Loop through and save each data frame using `here()`
+for (name in names(lhs_list_adj)) {
+  write.csv(lhs_list_adj[[name]], file = here::here("GenesGO", paste0(name, ".csv")), row.names = TRUE)
+}
+
+
+#Significance
+Allgenes_lhs_adj$Significance <- "Not significant"
+Allgenes_lhs_adj$Significance[Allgenes_lhs_adj$adj.P.Val < adj.P.value & Allgenes_lhs_adj$logFC >= lfc] <- "Upregulated"
+Allgenes_lhs_adj$Significance[Allgenes_lhs_adj$adj.P.Val < adj.P.value & Allgenes_lhs_adj$logFC <= -lfc] <- "Downregulated"
+
+#Plot DEG volcano plot
+lhs_plot_adj <- ggplot(Allgenes_lhs_adj, aes(x = logFC, y = -log10(adj.P.Val), color = Significance, size = Significance)) +
+  geom_hline(yintercept = -log10(0.05), col = "gray", linetype = 'dashed') +
+  geom_vline(xintercept = c(-1, 1), col = "gray", linetype = 'dashed') +
+  geom_point() +
+  scale_color_manual(values = clrs) +  
+  scale_size_manual(values = c(1, 0.5, 1)) +
+  labs(title = "(a) Life history stage", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
+  theme_classic() +
+  ylim(0,45) +
+  xlim(-4.2,4.2) +
+  theme(
+    legend.position = "bottom",
+    plot.title.position = "plot")
+```
+
 ### Heatmap
 
 Creating a heatmap to visualise the differentially expressed genes between the two life history stages.
@@ -581,14 +822,14 @@ Creating a heatmap to visualise the differentially expressed genes between the t
 #| label: heatmap_lhs
 #| echo: FALSE
 #Create heatmap for differentially expressed genes between time points
-DEG_lhs <- rownames(Filteredgenes_lhs)
+DEG_lhs <- rownames(Filteredgenes_lhs_WBC)
 
 #Extract the expression values for the differentially expressed genes
 expression_lhs <- vobj_lhs$E[DEG_lhs, ]
 
 #get labels
-annotation_lhs <- data.frame(LHS = as.factor(d_n$samples$life_history_stage))
-rownames(annotation_lhs) <- d_n$samples$Sample
+annotation_lhs <- data.frame(LHS = as.factor(d_n_WBC$samples$life_history_stage))
+rownames(annotation_lhs) <- d_n_WBC$samples$Sample
 annotation_lhs$LHS <- factor(annotation_lhs$LHS, levels = c("Mother", "Pup"))
 
 #order the expression values
@@ -614,7 +855,7 @@ heatmap_lhs <- pheatmap(matrix_lhs,
                        main = NA)
 
 
-ggsave(here::here("Plots","heatmap_lhs.png"), plot = heatmap_lhs, width = 3.5, height = 6, dpi = 600)
+ggsave(here::here("Plots","heatmap_lhs_WBC.png"), plot = heatmap_lhs, width = 3.5, height = 6, dpi = 600)
 ```
 
 ![Heatmap: Life history stage](Plots/heatmap_lhs.png)
@@ -628,7 +869,7 @@ Analysis performed by ALB using the framework outlined by BS.
 #| echo: FALSE
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 # #Create a design matrix
-design_c <- model.matrix(~ -1 + colony + WBC_ratio_log, data = d_n_complete$samples) #model contrasts without intercept is easier
+design_c <- model.matrix(~ -1 + colony, data = d_n_WBC$samples) #model contrasts without intercept is easier
 colnames(design_c) <- gsub("colony", "", colnames(design_c)) #clean group names
 #
 #create matrix for contrasts
@@ -637,23 +878,23 @@ contr.matrix.c <- makeContrasts(
  levels = colnames(design_c)) 
 #
 # #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-vobj_c <- voom(d_n_complete, design_c, plot=TRUE)
+vobj_c <- voom(d_n_WBC, design_c, plot=TRUE)
 #
 # # Fit a random effect
-dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n_complete$samples$ID)
+dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n_WBC$samples$ID)
 dupcor_c$consensus #the estimated intra individual correlation (0.1902523)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
-vobj_c = voom(d_n_complete, design_c, plot=TRUE, 
-          block=d_n_complete$samples$ID, correlation=dupcor_c$consensus)
+vobj_c = voom(d_n_WBC, design_c, plot=TRUE, 
+          block=d_n_WBC$samples$ID, correlation=dupcor_c$consensus)
 # #update the correlation for the new voom weights
-dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n_complete$samples$ID)
+dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n_WBC$samples$ID)
 dupcor_c$consensus #the estimated intra individual correlation (0.1999114)
 #
 # #Analyzing repeated measures data using duplicateCorrelation.
 # #The model forces the magnitude of the random effect to be the same across all genes.
 # #Estimate linear mixed model with a single variance component
-vfit_c <- lmFit(vobj_c, design_c, block=d_n_complete$samples$ID, correlation=dupcor_c$consensus)
+vfit_c <- lmFit(vobj_c, design_c, block=d_n_WBC$samples$ID, correlation=dupcor_c$consensus)
 vfit_c <- contrasts.fit(vfit_c, contrasts=contr.matrix.c)
 #
 # #Save the model to avoid recomputing everything
@@ -719,7 +960,7 @@ Analysis performed by ALB using the framework outlined by BS.
 #| echo: FALSE
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 # #Create a design matrix
-design_y <- model.matrix(~ -1 + year + WBC_ratio_log, data = d_n_complete$samples) #model contrasts without intercept is easier
+design_y <- model.matrix(~ -1 + year, data = d_n_WBC$samples) #model contrasts without intercept is easier
 colnames(design_y) <- c("Season1", "Season2", "WBC_ratio_log") #clean group names
 # #create matrix for contrasts
 contr.matrix.y <- makeContrasts(
@@ -727,24 +968,24 @@ contr.matrix.y <- makeContrasts(
   levels = colnames(design_y)) 
 #
 # #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-vobj_y <- voom(d_n_complete, design_y, plot=TRUE)
+vobj_y <- voom(d_n_WBC, design_y, plot=TRUE)
 # 
 # #Fit a random effect
-dupcor_y <- duplicateCorrelation(vobj_y, design_y, block = d_n_complete$samples$ID)
+dupcor_y <- duplicateCorrelation(vobj_y, design_y, block = d_n_WBC$samples$ID)
 dupcor_y$consensus #the estimated intra individual correlation (0.1630921)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
-vobj_y = voom(d_n_complete, design_y, plot=TRUE, 
-            block=d_n_complete$samples$ID, correlation=dupcor_y$consensus)
+vobj_y = voom(d_n_WBC, design_y, plot=TRUE, 
+            block=d_n_WBC$samples$ID, correlation=dupcor_y$consensus)
 # #update the correlation for the new voom weights
-dupcor_y <- duplicateCorrelation(vobj_y, design_y, block = d_n_complete$samples$ID)
+dupcor_y <- duplicateCorrelation(vobj_y, design_y, block = d_n_WBC$samples$ID)
 dupcor_y$consensus #the estimated intra individual correlation (0.1631328)
 #
 # #Analyzing repeated measures data using duplicateCorrelation.
 # #The model forces the magnitude of the random effect to be the same across all genes.
 #
 # #Estimate linear mixed model with a single variance component
-vfit_y <- lmFit(vobj_y, design_y, block=d_n_complete$samples$ID, correlation=dupcor_y$consensus)
+vfit_y <- lmFit(vobj_y, design_y, block=d_n_WBC$samples$ID, correlation=dupcor_y$consensus)
 vfit_y <- contrasts.fit(vfit_y, contrasts=contr.matrix.y)
 #
 # #Save the model to avoid recomputing everything
