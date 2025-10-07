@@ -882,14 +882,14 @@ vobj_c <- voom(d_n_WBC, design_c, plot=TRUE)
 #
 # # Fit a random effect
 dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n_WBC$samples$ID)
-dupcor_c$consensus #the estimated intra individual correlation (0.1902523)
+dupcor_c$consensus #the estimated intra individual correlation (0.1965244)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
 vobj_c = voom(d_n_WBC, design_c, plot=TRUE, 
           block=d_n_WBC$samples$ID, correlation=dupcor_c$consensus)
 # #update the correlation for the new voom weights
 dupcor_c <- duplicateCorrelation(vobj_c, design_c, block = d_n_WBC$samples$ID)
-dupcor_c$consensus #the estimated intra individual correlation (0.1999114)
+dupcor_c$consensus #the estimated intra individual correlation (0.1965529)
 #
 # #Analyzing repeated measures data using duplicateCorrelation.
 # #The model forces the magnitude of the random effect to be the same across all genes.
@@ -961,7 +961,7 @@ Analysis performed by ALB using the framework outlined by BS.
 #Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 # #Create a design matrix
 design_y <- model.matrix(~ -1 + year, data = d_n_WBC$samples) #model contrasts without intercept is easier
-colnames(design_y) <- c("Season1", "Season2", "WBC_ratio_log") #clean group names
+colnames(design_y) <- c("Season1", "Season2") #clean group names
 # #create matrix for contrasts
 contr.matrix.y <- makeContrasts(
   Season1vsSeason2 = Season1-Season2,
@@ -972,14 +972,14 @@ vobj_y <- voom(d_n_WBC, design_y, plot=TRUE)
 # 
 # #Fit a random effect
 dupcor_y <- duplicateCorrelation(vobj_y, design_y, block = d_n_WBC$samples$ID)
-dupcor_y$consensus #the estimated intra individual correlation (0.1630921)
+dupcor_y$consensus #the estimated intra individual correlation (0.1705068)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
 vobj_y = voom(d_n_WBC, design_y, plot=TRUE, 
             block=d_n_WBC$samples$ID, correlation=dupcor_y$consensus)
 # #update the correlation for the new voom weights
 dupcor_y <- duplicateCorrelation(vobj_y, design_y, block = d_n_WBC$samples$ID)
-dupcor_y$consensus #the estimated intra individual correlation (0.1631328)
+dupcor_y$consensus #the estimated intra individual correlation (0.1705545)
 #
 # #Analyzing repeated measures data using duplicateCorrelation.
 # #The model forces the magnitude of the random effect to be the same across all genes.
@@ -1052,8 +1052,8 @@ summary(dt_y)
 # ggsave(here::here("Plots","DEG_all.png"), plot = DEG_all, width = 7, height = 7, dpi = 600)
 
 #Plot for only time point and life history stage
-DEG_TPLHS <- ggarrange(lhs_plot + fig_theme, tp_plot + fig_theme + theme(axis.title.y = element_blank()), common.legend = T, legend = "bottom", widths = c(1, 0.95))
-ggsave(here::here("Plots","DEG_TPLHS.png"), plot = DEG_TPLHS, width = 7, height = 3.5, dpi = 600)
+DEG_TPLHS <- ggarrange(lhs_plot_adj + fig_theme, tp_plot_adj + fig_theme + theme(axis.title.y = element_blank()), common.legend = T, legend = "bottom", widths = c(1, 0.95))
+ggsave(here::here("Plots","DEG_TPLHS_adj.png"), plot = DEG_TPLHS, width = 7, height = 3.5, dpi = 600)
 ```
 
 ![Differential gene expression analysis](Plots/DEG_TPLHS.png)
