@@ -92,6 +92,8 @@ d_n_WBC$samples$year <- as.factor(d_n_WBC$samples$year)
 d_n_WBC$samples$group <- as.factor(d_n_WBC$samples$group)
 d_n_WBC$samples$pair <- as.factor(d_n_WBC$samples$pair)
 rm(d_n)
+dim(d_n_WBC)
+table(d_n_WBC$samples$pair)
 ```
 
 # PCA
@@ -1092,17 +1094,13 @@ for (file in file_paths) {
   assign(name, df, envir = .GlobalEnv)
 }
 
-Background_tp <- read.csv("GenesGO/All_tp.csv") %>%
+Background_tp <- read.csv("GenesGO/All_tp_adj.csv") %>%
   mutate(X = toupper(X))
 colnames(Background_tp)[1] <- "GeneSymbol"
 
-Background_lhs <- read.csv("GenesGO/All_lhs.csv") %>%
+Background_lhs <- read.csv("GenesGO/All_lhs_adj.csv") %>%
   mutate(X = toupper(X))
 colnames(Background_lhs)[1] <- "GeneSymbol"
-
-Background_inter <- read.csv("GenesGO/All_Interaction3.csv") %>%
-  mutate(X = toupper(X))
-colnames(Background_inter)[1] <- "GeneSymbol"
 
 rm(df, file, file_paths, name)
 ```
@@ -1114,9 +1112,9 @@ rm(df, file, file_paths, name)
 #| echo: FALSE
 #Go enrichment analysis for up and down regulated genes
 #Time point
-GO_TP_DOWN <- enrichGO(Downregulated_tp$GeneSymbol,
+GO_TP_DOWN <- enrichGO(Downregulated_tp_WBC$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
-                       universe = Background_tp$GeneSymbol,
+                       universe = Background_tp$GeneSymbol,  #WBC and ADJ have the same background set of genes
                        keyType = "SYMBOL",
                        ont = "BP",
                        pvalueCutoff = 0.05,
@@ -1124,7 +1122,7 @@ GO_TP_DOWN <- enrichGO(Downregulated_tp$GeneSymbol,
 GO_TP_DOWN <- GO_TP_DOWN %>%
   mutate(Regulation = "Downregulated") 
 
-GO_TP_UP <- enrichGO(Upregulated_tp$GeneSymbol,
+GO_TP_UP <- enrichGO(Upregulated_tp_WBC$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
                        universe = Background_tp$GeneSymbol,
                        keyType = "SYMBOL",
@@ -1136,7 +1134,7 @@ GO_TP_UP <- GO_TP_UP %>%
 
 #Life history stage
 #Downregulated_lhs <- Downregulated_lhs[,-1]  #If the code doesn't run as it's supposed to
-GO_LHS_DOWN <- enrichGO(Downregulated_lhs$GeneSymbol,
+GO_LHS_DOWN <- enrichGO(Downregulated_lhs_WBC$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
                        universe = Background_lhs$GeneSymbol,
                        keyType = "SYMBOL",
@@ -1146,7 +1144,7 @@ GO_LHS_DOWN <- enrichGO(Downregulated_lhs$GeneSymbol,
 GO_LHS_DOWN <- GO_LHS_DOWN %>%
   mutate(Regulation = "Downregulated") 
 
-GO_LHS_UP <- enrichGO(Upregulated_lhs$GeneSymbol,
+GO_LHS_UP <- enrichGO(Upregulated_lhs_WBC$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
                        universe = Background_lhs$GeneSymbol,
                        keyType = "SYMBOL",
@@ -1154,20 +1152,69 @@ GO_LHS_UP <- enrichGO(Upregulated_lhs$GeneSymbol,
                        pvalueCutoff = 0.05,
                        pAdjustMethod = "BH") 
 GO_LHS_UP <- GO_LHS_UP %>%
+  mutate(Regulation = "Upregulated")
+```
+
+## Gene ontology: Adjusted
+```{r}
+#| label: Enrichment_analysis
+#| echo: FALSE
+#Go enrichment analysis for up and down regulated genes
+#Time point
+GO_TP_DOWN_adj <- enrichGO(Downregulated_tp_adj$GeneSymbol,
+                       OrgDb = org.Hs.eg.db,
+                       universe = Background_tp$GeneSymbol,
+                       keyType = "SYMBOL",
+                       ont = "BP",
+                       pvalueCutoff = 0.05,
+                       pAdjustMethod = "BH") 
+GO_TP_DOWN_adj <- GO_TP_DOWN_adj %>%
+  mutate(Regulation = "Downregulated") 
+
+GO_TP_UP_adj <- enrichGO(Upregulated_tp_adj$GeneSymbol,
+                       OrgDb = org.Hs.eg.db,
+                       universe = Background_tp$GeneSymbol,
+                       keyType = "SYMBOL",
+                       ont = "BP",
+                       pvalueCutoff = 0.05,
+                       pAdjustMethod = "BH") 
+GO_TP_UP_adj <- GO_TP_UP_adj %>%
   mutate(Regulation = "Upregulated") 
 
+#Life history stage
+#Downregulated_lhs <- Downregulated_lhs[,-1]  #If the code doesn't run as it's supposed to
+GO_LHS_DOWN_adj <- enrichGO(Downregulated_lhs_adj$GeneSymbol,
+                       OrgDb = org.Hs.eg.db,
+                       universe = Background_lhs$GeneSymbol,
+                       keyType = "SYMBOL",
+                       ont = "BP",
+                       pvalueCutoff = 0.05,
+                       pAdjustMethod = "BH") 
+GO_LHS_DOWN_adj <- GO_LHS_DOWN_adj %>%
+  mutate(Regulation = "Downregulated") 
 
+GO_LHS_UP_adj <- enrichGO(Upregulated_lhs_adj$GeneSymbol,
+                       OrgDb = org.Hs.eg.db,
+                       universe = Background_lhs$GeneSymbol,
+                       keyType = "SYMBOL",
+                       ont = "BP",
+                       pvalueCutoff = 0.05,
+                       pAdjustMethod = "BH") 
+GO_LHS_UP_adj <- GO_LHS_UP_adj %>%
+  mutate(Regulation = "Upregulated")
 ```
 
 ## Top 20 enriched GOterms (biological process)
 
 ### Time point
-
 ```{r}
 #| label: Top20_TP
 #| echo: FALSE
 #Combine
 GO_TP <- rbind(as.data.frame(GO_TP_DOWN), as.data.frame(GO_TP_UP)) %>%
+  arrange(p.adjust) 
+
+GO_TP_adj <- rbind(as.data.frame(GO_TP_DOWN_adj), as.data.frame(GO_TP_UP_adj)) %>%
   arrange(p.adjust) 
 
 #Identify top20
@@ -1239,6 +1286,84 @@ EA_TP <- plot_grid(
 #ggsave(here::here("Plots","EA_TP.png"), plot = EA_TP, width = 7, height = 5, dpi = 600)
 
 ggsave(here::here("Plots","Bubble_TP.png"), plot = plot_TP + fig_theme + theme(legend.position = "none"), width = 4, height = 4, dpi = 600)
+```
+
+### Time point (adjusted)
+```{r}
+#| label: Top20_TP
+#| echo: FALSE
+#Combine
+GO_TP_adj <- rbind(as.data.frame(GO_TP_DOWN_adj), as.data.frame(GO_TP_UP_adj)) %>%
+  arrange(p.adjust) 
+
+#Identify top20
+GO_TP_Top20_adj <- GO_TP_adj %>%
+  arrange(p.adjust) %>%
+  slice_head(n = 20) 
+
+#Fancy smancy bubble plot
+plot_TP_adj <- ggplot(GO_TP_adj, aes(x = zScore, y = -log10(p.adjust))) +
+  geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.5) +
+
+  scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  
+  scale_fill_manual(values = c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5")) +
+  scale_size_continuous(name = "DEG Count") +
+  #Add the top terms to the plot
+  labs(
+    title = "(b) Time point",
+    x = "Z-score",
+    y = expression(-log[10]("Adjusted p-value")),
+    shape = "Regulation"
+  ) +
+    geom_text_repel(
+  data = GO_TP_Top20_adj,  
+  aes(label = ID),
+  nudge_y = 0.03,         #moves label up
+  size = 2.5,
+  segment.color = NA,
+  force = 1, 
+  max.overlaps = Inf
+) +
+  theme_classic() +
+  theme(legend.position = "right",
+        legend.title = element_text(size = 14),   
+        legend.text = element_text(size = 12),     
+        legend.key.size = unit(0.4, "cm")) +
+  guides(
+  size = guide_legend(
+    override.aes = list(shape = 24)  # use triangle in size legend
+  ),
+  fill = "none" 
+)
+
+#Top 20 GO terms and description
+GO_TP_Top20_table_adj <- GO_TP_Top20_adj[, c("ID", "Description")]
+colnames(GO_TP_Top20_table_adj) <- c("GO Term", "Description")
+rownames(GO_TP_Top20_table_adj) <- NULL
+
+#Force line break
+GO_TP_Top20_table_adj$Description <- str_wrap(GO_TP_Top20_table_adj$Description, width = 50)
+
+# Create alternating row colors
+row_colors <- rep(c("white", "#f0f0f0"), length.out = nrow(GO_TP_Top20_table_adj))
+
+#Table
+p_table_tp_adj <- ggtexttable(
+  GO_TP_Top20_table_adj,
+  rows = NULL,
+  theme = ttheme(
+    "light",
+    tbody = list(bg_params = list(fill = row_colors))))
+
+EA_TP_adj <- plot_grid(
+ plot_TP_adj + fig_theme,
+ NULL,
+ p_table_tp_adj,
+ ncol = 3,
+ rel_widths = c(1.1, 0.1, 0.90))
+
+ggsave(here::here("Plots","EA_TP_adj.png"), plot = EA_TP_adj, width = 12, height = 8, dpi = 600)
+ggsave(here::here("Plots","Bubble_TP_adj.png"), plot = plot_TP_adj + fig_theme + theme(legend.position = "none"), width = 4, height = 4, dpi = 600)
 ```
 
 ![Enrichment analysis: Time Point](Plots/EA_TP.png)
@@ -1317,17 +1442,99 @@ EA_LHS <- plot_grid(
  ncol = 3,
  rel_widths = c(1.1,0.1,0.9))
 
-ggsave(here::here("Plots","EA_LHS.png"), plot = EA_LHS, width = 11.5, height = 6.5, dpi = 600)
+ggsave(here::here("Plots","EA_LHS_WBC.png"), plot = EA_LHS, width = 11.5, height = 6.5, dpi = 600)
   
-ggsave(here::here("Plots","Bubble_LHS.png"), plot = plot_LHS + fig_theme + theme(legend.position = "none", axis.title.x = element_blank()), width = 4, height = 4, dpi = 600)  
+ggsave(here::here("Plots","Bubble_LHS_WBC.png"), plot = plot_LHS + fig_theme + theme(legend.position = "none", axis.title.x = element_blank()), width = 4, height = 4, dpi = 600)  
   
   
 Bubble_together <- plot_grid(plot_LHS + fig_theme + theme(legend.position = "none", axis.title.x = element_blank()),
   plot_TP + fig_theme + theme(legend.position = "none"), ncol = 1, align = "v", rel_heights = c(1, 1.1))  
-ggsave(here::here("Plots","Bubble_LHSTP.png"), plot = Bubble_together, width = 4, height = 10, dpi = 600)  
+ggsave(here::here("Plots","Bubble_LHSTP_WBC.png"), plot = Bubble_together, width = 4, height = 10, dpi = 600)  
 ```
 
 ![Enrichment analysis: Life hisotry stage](Plots/EA_LHS.png)
+
+### Life history stage (Adjusted)
+
+```{r}
+#| label: Top20_LHS
+#| echo: FALSE
+#Combine
+GO_LHS_adj <- rbind(as.data.frame(GO_LHS_DOWN_adj), as.data.frame(GO_LHS_UP_adj)) %>%
+  arrange(p.adjust) 
+
+#Identify top20
+GO_LHS_Top20_adj <- GO_LHS_adj %>%
+  arrange(p.adjust) %>%
+  slice_head(n = 20) 
+
+#Fancy smancy bubble plot
+plot_LHS_adj <- ggplot(GO_LHS_adj, aes(x = zScore, y = -log10(p.adjust))) +
+  geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.5) +
+  scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  
+  scale_fill_manual(values = c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5")) +
+  scale_size_continuous(name = "DEG Count") +
+  #Add the top terms to the plot
+    geom_text_repel(
+  data = GO_LHS_Top20_adj,  
+  aes(label = ID),
+  nudge_y = 0.03,         #moves label up
+  size = 2.5,
+  segment.color = NA,
+  force = 1,
+  max.overlaps = Inf) +
+    labs(
+    title = "(a) Life history stage",
+    x = "Z-score",
+    y = expression(-log[10]("Adjusted p-value")),
+    shape = "Regulation"
+  ) +
+  theme_classic() +
+  theme(legend.position = "right",
+        legend.title = element_text(size = 14),   
+        legend.text = element_text(size = 12),     
+        legend.key.size = unit(0.4, "cm")) +
+  guides(
+  size = guide_legend(
+    override.aes = list(shape = 24)  # use triangle in size legend
+  ),
+  fill = "none" 
+)
+
+#Top 20 GO terms and description
+GO_LHS_Top20_table_adj <- GO_LHS_Top20_adj[, c("ID", "Description")]
+colnames(GO_LHS_Top20_table_adj) <- c("GO Term", "Description")
+rownames(GO_LHS_Top20_table_adj) <- NULL
+#Force line break
+GO_LHS_Top20_table_adj$Description <- str_wrap(GO_LHS_Top20_table_adj$Description, width = 50)
+
+#Create alternating row colors
+row_colors <- rep(c("white", "#f0f0f0"), length.out = nrow(GO_LHS_Top20_table_adj))
+
+#Table
+p_table_lhs_adj <- ggtexttable(
+  GO_LHS_Top20_table_adj,
+  rows = NULL,
+  theme = ttheme(
+    "light",
+    tbody = list(bg_params = list(fill = row_colors))))
+
+EA_LHS_adj <- plot_grid(
+ plot_LHS_adj + fig_theme,
+ NULL,
+ p_table_lhs_adj,
+ ncol = 3,
+ rel_widths = c(1.1,0.1,0.9))
+
+ggsave(here::here("Plots","EA_LHS_adj.png"), plot = EA_LHS_adj, width = 12, height = 7, dpi = 600)
+  
+ggsave(here::here("Plots","Bubble_LHS_adj.png"), plot = plot_LHS + fig_theme + theme(legend.position = "none", axis.title.x = element_blank()), width = 4, height = 4, dpi = 600)  
+  
+  
+Bubble_together <- plot_grid(plot_LHS_adj + fig_theme + theme(legend.position = "none", axis.title.x = element_blank()),
+  plot_TP_adj + fig_theme + theme(legend.position = "none"), ncol = 1, align = "v", rel_heights = c(1, 1.1))  
+ggsave(here::here("Plots","Bubble_LHSTP_adj.png"), plot = Bubble_together, width = 4, height = 10, dpi = 600)  
+```
 
 ## Revigo in R
 
@@ -1350,6 +1557,17 @@ SM_GO_TP_DOWN <- calculateSimMatrix(GO_TP_DOWN$ID, orgdb = "org.Hs.eg.db", ont =
 SM_GO_TP_UP <- calculateSimMatrix(GO_TP_UP$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
 SM_GO_LHS_DOWN <- calculateSimMatrix(GO_LHS_DOWN$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
 SM_GO_LHS_UP <- calculateSimMatrix(GO_LHS_UP$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
+```
+
+#### Adjusted
+```{r}
+#| label: Similarity_matrices
+#| echo: FALSE
+#calculate similarity matrices for all contrasts
+SM_GO_TP_DOWN_adj <- calculateSimMatrix(GO_TP_DOWN_adj$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
+SM_GO_TP_UP_adj <- calculateSimMatrix(GO_TP_UP_adj$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
+SM_GO_LHS_DOWN_adj <- calculateSimMatrix(GO_LHS_DOWN_adj$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
+SM_GO_LHS_UP_adj <- calculateSimMatrix(GO_LHS_UP_adj$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
 ```
 
 ### Reduce terms
@@ -1403,57 +1621,56 @@ reduced_LHS_DOWN <- reduceSimMatrix(
     threshold = 0.7,
     orgdb = "org.Hs.eg.db")
 ```
-
-## Heatmaps
-
-### Time point
-
+#### Adjusted 
 ```{r}
-#| label: revigo_heatmap_time_point
+#| label: Reduce_terms
 #| echo: FALSE
-HP_GO_TP_UP <- heatmapPlot(SM_GO_TP_UP,
-                             reduced_TP_UP,
-                             annotateParent=TRUE,
-                             annotationLabel="parentTerm",
-                             fontsize=6,
-                             main = "Time Point (Upregulated)")
+## Time point
+# Compute scores TP_DOwn
+scores_TP_DOWN_adj <- -log10(as.numeric(GO_TP_DOWN_adj$p.adjust))
+names(scores_TP_DOWN_adj) <- GO_TP_DOWN_adj$ID
 
-HP_GO_TP_DOWN <- heatmapPlot(SM_GO_TP_DOWN,
-                             reduced_TP_DOWN,
-                             annotateParent=TRUE,
-                             annotationLabel="parentTerm",
-                             fontsize=6,
-                             main = "Time Point (Downregulated)")
+#Reduce terms
+reduced_TP_DOWN_adj <- reduceSimMatrix(
+    simMatrix = SM_GO_TP_DOWN_adj,
+    scores = scores_TP_DOWN_adj,
+    threshold = 0.7,
+    orgdb = "org.Hs.eg.db")
 
-HP_GO_TP <- plot_grid(HP_GO_TP_UP$gtable, HP_GO_TP_DOWN$gtable, ncol = 1)
-ggsave(here::here("Plots","HP_GO_TP.png"), plot = HP_GO_TP, width = 7, height = 10, dpi = 600)
+# Compute scores TP_UP
+scores_TP_UP_adj <- -log10(as.numeric(GO_TP_UP_adj$p.adjust))
+names(scores_TP_UP_adj) <- GO_TP_UP_adj$ID
+
+#Reduce terms
+reduced_TP_UP_adj <- reduceSimMatrix(
+    simMatrix = SM_GO_TP_UP_adj,
+    scores = scores_TP_UP_adj,
+    threshold = 0.7,
+    orgdb = "org.Hs.eg.db")
+
+## Life hisotry stage
+# Compute scores LHS_UP
+scores_LHS_UP_adj <- -log10(as.numeric(GO_LHS_UP_adj$p.adjust))
+names(scores_LHS_UP_adj) <- GO_LHS_UP_adj$ID
+
+#Reduce terms
+reduced_LHS_UP_adj <- reduceSimMatrix(
+    simMatrix = SM_GO_LHS_UP_adj,
+    scores = scores_LHS_UP_adj,
+    threshold = 0.7,
+    orgdb = "org.Hs.eg.db")
+
+# Compute scores LHS_DOWN
+scores_LHS_DOWN_adj <- -log10(as.numeric(GO_LHS_DOWN_adj$p.adjust))
+names(scores_LHS_DOWN_adj) <- GO_LHS_DOWN_adj$ID
+
+#Reduce terms
+reduced_LHS_DOWN_adj <- reduceSimMatrix(
+    simMatrix = SM_GO_LHS_DOWN_adj,
+    scores = scores_LHS_DOWN_adj,
+    threshold = 0.7,
+    orgdb = "org.Hs.eg.db")
 ```
-
-![Heatmap: GOterms (Time Point)](Plots/HP_GO_TP.png) \### Life history stage
-
-```{r}
-#| label: revigo_heatmap_life_history_stage
-#| echo: FALSE
-
-HP_GO_LHS_UP <- heatmapPlot(SM_GO_LHS_UP,
-                                  reduced_LHS_UP,
-                                  annotateParent=TRUE,
-                                  annotationLabel="parentTerm",
-                                  fontsize=6,
-                                 main = "Life history stage (Upregulated)")
-
-HP_GO_LHS_DOWN <- heatmapPlot(SM_GO_LHS_DOWN,
-                                  reduced_LHS_DOWN,
-                                  annotateParent=TRUE,
-                                  annotationLabel="parentTerm",
-                                  fontsize=6,
-                                  main = "Life history stage (Downregulated)")
-
-HP_GO_LHS <- plot_grid(HP_GO_LHS_UP$gtable, HP_GO_LHS_DOWN$gtable, ncol = 1)
-ggsave(here::here("Plots","HP_GO_LHS.png"), plot = HP_GO_LHS, width = 7, height = 10, dpi = 600)
-```
-
-![Heatmap: GOterms (Life history stage)](Plots/HP_GO_LHS.png)
 
 ## Scatterplots
 
@@ -1479,10 +1696,34 @@ SP_GO_TP_DOWN <- scatterPlot(SM_GO_TP_DOWN, reduced_TP_DOWN, size = "score", add
   ggtitle("Time point: downregulated") 
 
 SP_TP_GO <- plot_grid(SP_GO_TP_UP + fig_theme, SP_GO_TP_DOWN+fig_theme)
-ggsave(here::here("Plots","SP_TP_GO.png"), plot = SP_TP_GO, width = 9, height = 4.5, dpi = 600)
+ggsave(here::here("Plots","SP_TP_GO_WBC.png"), plot = SP_TP_GO, width = 9, height = 4.5, dpi = 600)
 ```
 
 ![Semantic similarity of GOterms (Time point)](Plots/SP_TP_GO.png) \### Life history stage
+
+#### TP: Adjusted
+```{r}
+#| label: scatterplot_time_point
+#| echo: FALSE
+SP_GO_TP_UP_adj <- scatterPlot(SM_GO_TP_UP_adj, reduced_TP_UP_adj, size = "score", addLabel = T, labelSize = 3) + 
+  theme_classic() + 
+  xlim(c(-1,1)) + 
+  ylim(c(-1,1)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Time point: downregulated") 
+
+SP_GO_TP_DOWN_adj <- scatterPlot(SM_GO_TP_DOWN_adj, reduced_TP_DOWN_adj, size = "score", addLabel = T, labelSize = 3) + 
+  theme_classic() + 
+  xlim(c(-1,1)) + 
+  ylim(c(-1,1)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Time point: downregulated") 
+
+SP_TP_GO_adj <- plot_grid(SP_GO_TP_UP_adj + fig_theme, SP_GO_TP_DOWN_adj + fig_theme)
+ggsave(here::here("Plots","SP_TP_GO_adj.png"), plot = SP_TP_GO_adj, width = 9, height = 4.5, dpi = 600)
+```
 
 ```{r}
 #| label: scatterplot_life_history_stage
@@ -1507,11 +1748,11 @@ SP_GO_LHS_DOWN <- scatterPlot(SM_GO_LHS_DOWN, reduced_LHS_DOWN, size = "score", 
 SP_LHS_GO <- plot_grid(SP_GO_LHS_UP, SP_GO_LHS_DOWN)
 ggsave(here::here("Plots","SP_LHS_GO.png"), plot = SP_LHS_GO, width = 9, height = 4.5, dpi = 600)
 
-fig_theme <- theme(text = element_text(family = "Arial", size = 14),
+fig_theme <- theme(text = element_text(family = "Arial", size = 12),
                    legend.title = element_blank(),
-                   legend.text=element_text(size=12),
-                   axis.text.x = element_text(size =12),
-                   axis.text.y = element_text(size = 12))
+                   legend.text=element_text(size=10),
+                   axis.text.x = element_text(size =10),
+                   axis.text.y = element_text(size = 10))
 
 SP_TP_GO <- plot_grid(SP_GO_TP_UP + 
                         theme(axis.title.x = element_blank()) + fig_theme, 
@@ -1522,6 +1763,47 @@ SP_LHS_GO <- plot_grid(SP_GO_LHS_UP + fig_theme,
                        SP_GO_LHS_DOWN + fig_theme + theme(axis.title.y = element_blank()))
 combined_SP <- plot_grid(SP_TP_GO, SP_LHS_GO, ncol = 1)
 ggsave(here::here("Plots","combined_SP.png"), plot = combined_SP, width = 7, height = 7, dpi = 600)
+```
+
+#### Adjusted 
+```{r}
+#| label: scatterplot_life_history_stage
+#| echo: FALSE
+
+SP_GO_LHS_UP_adj <- scatterPlot(SM_GO_LHS_UP_adj, reduced_LHS_UP_adj, size = "score", addLabel = T, labelSize = 3) + 
+  theme_classic() + 
+  xlim(c(-1,1)) + 
+  ylim(c(-1,1)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Life history stage: upregulated") 
+
+SP_GO_LHS_DOWN_adj <- scatterPlot(SM_GO_LHS_DOWN_adj, reduced_LHS_DOWN_adj, size = "score", addLabel = T, labelSize = 3) + 
+  theme_classic() +
+  xlim(c(-1,1)) + 
+  ylim(c(-1,1)) +
+  xlab("Semantic space x") +
+  ylab("Semantic space y") +
+  ggtitle("Life history stage: downregulated") 
+
+SP_LHS_GO_adj <- plot_grid(SP_GO_LHS_UP_adj, SP_GO_LHS_DOWN_adj)
+ggsave(here::here("Plots","SP_LHS_GO_adj.png"), plot = SP_LHS_GO_adj, width = 9, height = 4.5, dpi = 600)
+
+fig_theme <- theme(text = element_text(family = "Arial", size = 14),
+                   legend.title = element_blank(),
+                   legend.text=element_text(size=12),
+                   axis.text.x = element_text(size =12),
+                   axis.text.y = element_text(size = 12))
+
+SP_TP_GO_adj <- plot_grid(SP_GO_TP_UP_adj + 
+                        theme(axis.title.x = element_blank()) + fig_theme, 
+                      SP_GO_TP_DOWN_adj +fig_theme +
+                        theme(axis.title.x = element_blank(),
+                              axis.title.y = element_blank()))
+SP_LHS_GO_adj <- plot_grid(SP_GO_LHS_UP_adj + fig_theme, 
+                       SP_GO_LHS_DOWN_adj + fig_theme + theme(axis.title.y = element_blank()))
+combined_SP_adj <- plot_grid(SP_TP_GO_adj, SP_LHS_GO_adj, ncol = 1)
+ggsave(here::here("Plots","combined_SP_adj.png"), plot = combined_SP_adj, width = 7, height = 7, dpi = 600)
 ```
 
 #### scatterplot with more flexibility
@@ -1618,6 +1900,7 @@ SP_GO_TP_DOWN <- plot_semantic_similarity(SM_GO_TP_DOWN, reduced_TP_DOWN,
                                           "(c) Downregulated on day 60", parent_colors)
 SP_GO_LHS_UP  <- plot_semantic_similarity(SM_GO_LHS_UP, reduced_LHS_UP, 
                                           "(a) Upregulated in mothers", parent_colors)
+
 parent_colors <- c(
  "#FDA172", "#9867B5", "#8B9E58", "#4C6A92",
  "#C44B4E", "#C46A00", "#B58E36", "#6C75A9",
@@ -1641,3 +1924,147 @@ ggsave(here::here("Plots","combined_SP.png"), plot = combined_SP, width = 7, hei
 ```
 
 ![Semantic similarity of GOterms (Life history stage)](Plots/combined_SP.png)
+#### Adjusted
+```{r}
+#| label: scatterplot_manual
+#| echo: FALSE
+parent_colors <- c(
+  "#FDA172",  # orange
+  "#9867B5",  # purple
+  "#8B9E58",  # olive green
+  "#638B9B",  # teal
+  "#C44B4E",  # deep red
+  "#C46A00",  # rusty orange
+  "#B58E36",  # golden brown
+  "#6C75A9"   # muted blue-grey
+)
+
+# Function to generate semantic similarity scatter plot
+plot_semantic_similarity <- function(simMatrix, reducedTerms, title_text, 
+                                     parent_colors, xlim_val = c(-1, 1), ylim_val = c(-1, 1),
+                                     point_alpha = 0.5, point_range = c(0, 20), label_size = 2.5,
+                                     top_n = NULL, min_score = NULL, box_padding = 0.05) {
+  
+  # 1. Distance matrix
+  dist_mat <- as.dist(1 - simMatrix)
+  
+  # 2. MDS
+  mds <- cmdscale(dist_mat, eig = TRUE, k = 2)
+  
+  # 3. Build dataframe with metadata
+  df <- as.data.frame(mds$points)
+  df$go <- rownames(df)
+  df <- merge(df, reducedTerms[, c("go", "term", "parent", "parentTerm", "score")],
+              by = "go", all.x = TRUE)
+  
+  # 4.select top 5 most important parent terms
+top_per_parent <- df %>%
+  group_by(parent) %>%
+  slice_max(score, n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+top_parents <- top_per_parent %>%
+  arrange(desc(score)) %>%
+  slice(1:5) %>%   # top 5 parents
+  pull(parent) 
+
+label_data <- df %>%
+  filter(parent %in% top_parents) %>%
+  group_by(parentTerm) %>%
+  summarise(
+    V1 = mean(V1),
+    V2 = mean(V2),
+    score = max(score)
+  ) %>%
+  ungroup()
+  
+  # 5. Filter top N or by minimum score if requested
+  if(!is.null(top_n)) {
+    label_data <- label_data %>% arrange(desc(score)) %>% slice(1:top_n)
+  }
+  if(!is.null(min_score)) {
+    label_data <- label_data %>% filter(score >= min_score)
+  }
+  
+  # 6. Plot
+  p <- ggplot(df, aes(x = V1, y = V2, color = parentTerm)) +
+    geom_point(aes(size = score), alpha = point_alpha) +
+    scale_color_manual(values = parent_colors, guide = "none") +
+    scale_size_continuous(range = point_range, guide = "none") +
+    theme_classic() +
+    xlim(xlim_val) +
+    ylim(ylim_val) +
+    xlab("Semantic space x") +
+    ylab("Semantic space y") +
+    ggtitle(title_text) +
+    geom_label_repel(aes(label = parentTerm),
+                     data = label_data,
+                     force = 1,
+                     box.padding = unit(box_padding, "lines"),
+                     point.padding = unit(0.3, "lines"),
+                     size = label_size,
+                     max.overlaps = Inf)
+  
+  return(p)
+}
+
+# -------------------------------
+# Example usage for your four datasets
+
+SP_GO_TP_UP_adj   <- plot_semantic_similarity(SM_GO_TP_UP_adj, reduced_TP_UP_adj, 
+                                          "(d) Upregulated on day 60", parent_colors)
+SP_GO_TP_DOWN_adj <- plot_semantic_similarity(SM_GO_TP_DOWN_adj, reduced_TP_DOWN_adj, 
+                                          "(c) Downregulated on day 60", parent_colors)
+
+scores_LHS_UP <- -log10(as.numeric(GO_LHS_UP$p.adjust))
+names(scores_LHS_UP) <- GO_LHS_UP$ID
+SS_LHS_adj <- as.data.frame(cbind(GO_LHS_UP$ID, -log10(as.numeric(GO_LHS_UP$p.adjust)), GO_LHS_UP$Description, 0, 0))
+colnames(SS_LHS_adj) <- c("ID", "score", "Description", "V1", "V2")
+SS_LHS_adj$V1 <- as.numeric(SS_LHS_adj$V1)
+SS_LHS_adj$V2 <- as.numeric(SS_LHS_adj$V2)
+SS_LHS_adj$score <- as.numeric(SS_LHS_adj$score)
+
+xlim_val = c(-1, 1)
+ylim_val = c(-1, 1)
+SP_GO_LHS_UP_adj <- ggplot(SS_LHS_adj, aes(x = V1, y = V2, color = Description)) +
+    geom_point(aes(size = score), alpha = 0.5) +
+    scale_color_manual(values = parent_colors, guide = "none") +
+    scale_size_continuous(range = c(0, 20), guide = "none") +
+    theme_classic() +
+    xlim(xlim_val) +
+    ylim(ylim_val) +
+    xlab("Semantic space x") +
+    ylab("Semantic space y") +
+    ggtitle("(a) Upregulated in mothers") +
+    geom_label_repel(aes(label = Description),
+                     data = SS_LHS_adj,
+                     force = 1,
+                     box.padding = unit(0.09, "lines"),
+                     point.padding = unit(0.2, "lines"),
+                     size = 2.5,
+                     max.overlaps = Inf)
+
+
+
+
+parent_colors <- c(
+ "#FDA172", "#9867B5", "#8B9E58", "#4C6A92",
+ "#C44B4E", "#C46A00", "#B58E36", "#6C75A9",
+ "#A67C52", "#7A5E7E", "#5C8C6B", "#7289B0",
+ "#D98C6D", "#8B6D92", "#B5A04C", "#587085",
+ "#C4889F", "#74935E", "#9A7C5D", "#66778B", "#A37B9A")
+
+SP_GO_LHS_DOWN_adj <- plot_semantic_similarity(SM_GO_LHS_DOWN_adj, reduced_LHS_DOWN_adj, 
+                                        "(b) Upregulated in pups", parent_colors, box_padding = 0.27, label_size = 2.43)
+
+  
+SP_LHS_GO_adj <- plot_grid(SP_GO_LHS_UP_adj + 
+                        theme(axis.title.x = element_blank()) + fig_theme,  
+                      SP_GO_LHS_DOWN_adj + fig_theme + theme(axis.title = element_blank()), rel_widths = c(1.05, 1))
+SP_TP_GO_adj <- plot_grid(SP_GO_TP_DOWN_adj + fig_theme, 
+                       SP_GO_TP_UP_adj + fig_theme + coord_cartesian(clip = "off") + theme(axis.title.y = element_blank(),
+  plot.margin = margin(5, 10, 5, 5)), ncol = 2, rel_widths = c(1.05, 1))  
+  
+combined_SP_adj <- plot_grid(SP_LHS_GO_adj, SP_TP_GO_adj, ncol = 1)
+ggsave(here::here("Plots","combined_SP_adj.png"), plot = combined_SP_adj, width = 7, height = 7, dpi = 600)
+```

@@ -1,6 +1,6 @@
 ###### RNA-seq data by Rebecca Nagel ######
 ###### Script by Bernice Sepers ######
-###### Arctocephalus gazella 2018-2019 and 2019-202 focal individuals ######
+###### Arctocephalus gazella 2018-2019 and 2019-2020 focal individuals ######
 
 
 ##-------------- create tx2gene file to be able to link gene_ID to transcript ID --------------##
