@@ -231,7 +231,9 @@ PCA_plots <- plot_grid(PCA_C + legend_theme + theme(axis.title.x = element_blank
                        PCA_Y + legend_theme + theme(axis.title.x = element_blank(),
                                                       axis.title.y = element_blank()), 
                        PCA_LHS + legend_theme, 
-                       PCA_TP + legend_theme + theme(axis.title.y = element_blank()),
+   
+                       
+                                           PCA_TP + legend_theme + theme(axis.title.y = element_blank()),
                        ncol = 2)
 
 ggsave(here::here("Plots","PCA_plots_adj.png"), plot = PCA_plots, dpi = 600)
@@ -239,6 +241,52 @@ rm(PCA_LHS, PCA_TP, PCA_Y, PCA_C)
 ```
 
 ![Principle component analysis of processed data](Plots/PCA_plots.png)
+
+```{r}
+#Test PCA
+install.packages("vegan")
+library(vegan)
+
+adonis2(as.matrix(pc_scores[, 1:2]) ~ group + year + colony + life_history_stage,
+        data = pc_scores, permutations = 1000,
+        method = "euclidean", by = "margin")
+
+#Test for within group variance
+#https://www.rdocumentation.org/packages/vegan/versions/2.7-1/topics/permutest.betadisper
+dist_mat <- dist(pc_scores[, 1:2])
+bd_colony <- betadisper(dist_mat, pc_scores$colony)
+anova(bd_colony)
+(mod.HSD <- TukeyHSD(bd_colony))
+plot(mod.HSD)
+permutest(bd_colony, permutations = 1000)
+
+bd_year <- betadisper(dist_mat, pc_scores$year)
+anova(bd_year)
+(mod.HSD.y <- TukeyHSD(bd_year))
+plot(mod.HSD.y)
+permutest(bd_year, permutations = 1000)
+
+bd_lhs <- betadisper(dist_mat, pc_scores$life_history_stage)
+anova(bd_lhs)
+(mod.HSD.lhs <- TukeyHSD(bd_lhs))
+plot(mod.HSD.lhs)
+permutest(bd_lhs, permutations = 1000)
+
+bd_tp <- betadisper(dist_mat, pc_scores$group)
+anova(bd_tp)
+(mod.HSD.tp <- TukeyHSD(bd_tp))
+plot(mod.HSD.tp)
+permutest(bd_tp, permutations = 1000)
+
+par(mfrow = c(2, 2))
+boxplot(bd_colony, main = "Dispersion by colony")
+boxplot(bd_year, main = "Dispersion by year")
+boxplot(bd_lhs, main = "Dispersion by life-history stage")
+boxplot(bd_tp, main = "Dispersion by developmental time point")
+
+
+```
+
 
 ```{r}
 #| label: Nice_tables
@@ -1060,7 +1108,7 @@ ggsave(here::here("Plots","DEG_TPLHS_adj.png"), plot = DEG_TPLHS, width = 7, hei
 
 ![Differential gene expression analysis](Plots/DEG_TPLHS.png)
 
-# GOterms using clusterProfiler
+ # GOterms using clusterProfiler
 
 In this section, we are conducting a gene ontology (GO) enrichment using Clusterprofiler to identify biological processes significantly associated with differentially expressed genes.
 
@@ -1217,6 +1265,7 @@ GO_TP <- rbind(as.data.frame(GO_TP_DOWN), as.data.frame(GO_TP_UP)) %>%
 GO_TP_adj <- rbind(as.data.frame(GO_TP_DOWN_adj), as.data.frame(GO_TP_UP_adj)) %>%
   arrange(p.adjust) 
 
+write.csv(GO_TP_adj, here::here("GenesGO", "GO_TP_adj.csv"), row.names = F)
 #Identify top20
 GO_TP_Top20 <- GO_TP %>%
   arrange(p.adjust) %>%
@@ -1463,6 +1512,7 @@ ggsave(here::here("Plots","Bubble_LHSTP_WBC.png"), plot = Bubble_together, width
 GO_LHS_adj <- rbind(as.data.frame(GO_LHS_DOWN_adj), as.data.frame(GO_LHS_UP_adj)) %>%
   arrange(p.adjust) 
 
+write.csv(GO_LHS_adj, here::here("GenesGO", "GO_LHS_adj.csv"), row.names = F)
 #Identify top20
 GO_LHS_Top20_adj <- GO_LHS_adj %>%
   arrange(p.adjust) %>%
@@ -2067,4 +2117,74 @@ SP_TP_GO_adj <- plot_grid(SP_GO_TP_DOWN_adj + fig_theme,
   
 combined_SP_adj <- plot_grid(SP_LHS_GO_adj, SP_TP_GO_adj, ncol = 1)
 ggsave(here::here("Plots","combined_SP_adj.png"), plot = combined_SP_adj, width = 7, height = 7, dpi = 600)
+```
+
+
+#Sex differences in pups
+##Data
+```{r}
+#| label: load_data
+#| echo: FALSE
+#Load in the filtered data
+#Mutate all needed predictors into factors
+d_n_pups <- readRDS("rnaseq_filtered_sex_Liv_pups.Rdata")  
+#dim(d_n) 12639 rows
+```
+
+
+## Time point: Analysis by Bernice
+
+BS assessed differential expression per gene between the two time points (start vs end).
+
+```{r}
+#| label: DEG_Time_point
+#| echo: FALSE
+#-------------- ANALYSIS OF SEX DIFFERENCES --------------##
+#fix individual with missing sex
+d_n_pups$samples["T21_SSB_pup_start_2019B", "sex"] <- "F"
+#factor
+d_n_pups$samples$sex <- factor(d_n_pups$samples$sex)
+design_pup <- model.matrix(~ -1 + sex, data = d_n_pups$samples) 
+colnames(design_pup) <- gsub("sex", "", colnames(design_pup)) #clean group names
+
+contr.matrix_pup <- makeContrasts(
+ M_vs_F = M-F,
+ levels = colnames(design_pup)) #create matrix for contrasts
+
+#voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
+vobj_pup <- voom(d_n_pups, design_pup, plot=TRUE)
+
+# # Fit a random effect
+dupcor_pup <- duplicateCorrelation(vobj_pup, design_pup, block = d_n_pups$samples$ID)
+dupcor_pup$consensus #the estimated intra individual correlation (0.1801072)
+# #the intra individual correlation will change the voom weights slightly
+# #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
+vobj_pup = voom(d_n_pups, design_pup, plot=TRUE,
+            block=d_n_pups$samples$ID, correlation=dupcor_pup$consensus)
+#update the correlation for the new voom weights
+dupcor_pup <- duplicateCorrelation(vobj_pup, design_pup, block = d_n_pups$samples$ID)
+dupcor_pup$consensus #the estimated intra individual correlation (0.1801236)
+# #Fit the model
+# # But this step uses only the genome-wide average for the random effect
+vfit_pup <- lmFit(vobj_pup, design_pup, block=d_n_pups$samples$ID, correlation=dupcor_pup$consensus)
+vfit_pup <- contrasts.fit(vfit_pup, contrasts=contr.matrix_pup)
+
+# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
+efit_pup <- eBayes(vfit_pup)
+topTable(efit_pup, n=20)
+plotSA(efit_pup, main="Final model: Mean-variance trend")
+plotMD(efit_pup)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit_pup$F
+head(efit_pup$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
+head(efit_pup$p.value) #same
+summary(decideTests(efit_pup, adjust.method="fdr"))
+
+tfit_pup <- treat(vfit_pup, lfc=lfc) #lfc = 1, lfc_half = 0.5
+topTreat(tfit_pup)
+nrow(tfit_pup)
+dt_pup <- decideTests(tfit_pup, adjust.method="fdr")
+summary(dt_pup) 
 ```
