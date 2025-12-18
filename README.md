@@ -30,4 +30,4 @@ This repository contains scripts, data, and models for the RNA-seq gene expressi
 
 #### Contact details
 
-This script was run by Bernice Sepers (bioinformatics pipeline) and Ane Liv Berthelsen (analysis). If you ahve any questions, please contact: ane_liv.berthelsen[at]uni-bielefeld.de
+This script was run by Bernice Sepers (bioinformatics pipeline) and Ane Liv Berthelsen (analysis). If you have any questions, please contact: ane_liv.berthelsen[at]uni-bielefeld.de
