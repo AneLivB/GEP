@@ -476,7 +476,6 @@ Analysis performed by ALB using the framework outlined by BS.
 ```{r}
 #| label: DEG_LHS
 #| echo: FALSE
-#Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 #Create a design matrix
 design_lhs <- model.matrix(~ -1 + life_history_stage, data = d_n$samples) #model contrasts without intercept is easier
 colnames(design_lhs) <- gsub("life_history_stage", "", colnames(design_lhs)) #clean group names
@@ -626,7 +625,6 @@ Analysis performed by ALB using the framework outlined by BS.
 ```{r}
 #| label: DEG_colony
 #| echo: FALSE
-#Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 # #Create a design matrix
 design_c <- model.matrix(~ -1 + colony + WBC_ratio_log, data = d_n_complete$samples) #model contrasts without intercept is easier
 colnames(design_c) <- gsub("colony", "", colnames(design_c)) #clean group names
@@ -717,7 +715,7 @@ Analysis performed by ALB using the framework outlined by BS.
 ```{r}
 #| label: DEG_season
 #| echo: FALSE
-#Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
+
 # #Create a design matrix
 design_y <- model.matrix(~ -1 + year + WBC_ratio_log, data = d_n_complete$samples) #model contrasts without intercept is easier
 colnames(design_y) <- c("Season1", "Season2", "WBC_ratio_log") #clean group names

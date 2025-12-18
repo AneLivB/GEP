@@ -180,45 +180,49 @@ rm(exprs_mat, exprs_t, cpm_mat)
 #| echo: FALSE
 #| message: false
 #Plot in accordance to LHS and TP
-PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage)) +
+PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage, shape = life_history_stage)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
   scale_color_manual(values = c("#E69F00", "#56B4E9")) +
+  scale_shape_manual(values = c(16,17)) +
   xlim(-200, 200) +
   ylim(-200, 200) +
-  labs(title = "(c) Life history stage", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
+  labs(title = "(c) Life history stage", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL, shape = NULL)
 
 #levels(pc_scores$group)
-levels(pc_scores$group) <- c("Day 0", "Day 60")
-PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group)) +
+levels(pc_scores$group) <- c("Day zero", "Day 60")
+PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group, shape = group)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
   scale_color_manual(values = c("#E69F00", "#56B4E9")) +
+  scale_shape_manual(values = c(16,17)) +
   xlim(-200, 200) +
   ylim(-200, 200) +
-  labs(title = "(d) Time point", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
+  labs(title = "(d) Developmental time point", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL, shape = NULL)
 
 #levels(pc_scores$year)
 levels(pc_scores$year) <- c("2019", "2020")
-PCA_Y <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = year)) +
+PCA_Y <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = year, shape = year)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
   scale_color_manual(values = c("#E69F00", "#56B4E9")) +
+  scale_shape_manual(values = c(16,17)) +
   xlim(-200, 200) +
   ylim(-200, 200) +
-  labs(title = "(b) Season", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
+  labs(title = "(b) Food availability", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL, shape = NULL)
 
-PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
+PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony, shape = colony)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
   scale_color_manual(values = c("#E69F00", "#56B4E9")) +
+  scale_shape_manual(values = c(16,17)) +
   xlim(-200, 200) +
   ylim(-200, 200) +  
-  labs(title = "(a) Colony", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
+  labs(title = "(a) Social density", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL, shape = NULL)
 
 legend_theme <- theme(
     legend.position = c(0.95, 0.95), 
@@ -240,7 +244,7 @@ ggsave(here::here("Plots","PCA_plots_adj.png"), plot = PCA_plots, dpi = 600)
 rm(PCA_LHS, PCA_TP, PCA_Y, PCA_C)
 ```
 
-![Principle component analysis of processed data](Plots/PCA_plots.png)
+![Principle component analysis of processed data](Plots/PCA_plots_adj.png)
 
 ```{r}
 #Test PCA
@@ -665,7 +669,6 @@ Analysis performed by ALB using the framework outlined by BS.
 ```{r}
 #| label: DEG_LHS
 #| echo: FALSE
-#Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 #Create a design matrix
 design_lhs <- model.matrix(~ -1 + life_history_stage, data = d_n_WBC$samples) #model contrasts without intercept is easier
 colnames(design_lhs) <- gsub("life_history_stage", "", colnames(design_lhs)) #clean group names
@@ -917,7 +920,6 @@ Analysis performed by ALB using the framework outlined by BS.
 ```{r}
 #| label: DEG_colony
 #| echo: FALSE
-#Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 # #Create a design matrix
 design_c <- model.matrix(~ -1 + colony, data = d_n_WBC$samples) #model contrasts without intercept is easier
 colnames(design_c) <- gsub("colony", "", colnames(design_c)) #clean group names
@@ -1008,7 +1010,6 @@ Analysis performed by ALB using the framework outlined by BS.
 ```{r}
 #| label: DEG_season
 #| echo: FALSE
-#Tagged out to not run dupcor again (the saved outcome can be called from the dupcor folder)
 # #Create a design matrix
 design_y <- model.matrix(~ -1 + year, data = d_n_WBC$samples) #model contrasts without intercept is easier
 colnames(design_y) <- c("Season1", "Season2") #clean group names
@@ -2117,74 +2118,4 @@ SP_TP_GO_adj <- plot_grid(SP_GO_TP_DOWN_adj + fig_theme,
   
 combined_SP_adj <- plot_grid(SP_LHS_GO_adj, SP_TP_GO_adj, ncol = 1)
 ggsave(here::here("Plots","combined_SP_adj.png"), plot = combined_SP_adj, width = 7, height = 7, dpi = 600)
-```
-
-
-#Sex differences in pups
-##Data
-```{r}
-#| label: load_data
-#| echo: FALSE
-#Load in the filtered data
-#Mutate all needed predictors into factors
-d_n_pups <- readRDS("rnaseq_filtered_sex_Liv_pups.Rdata")  
-#dim(d_n) 12639 rows
-```
-
-
-## Time point: Analysis by Bernice
-
-BS assessed differential expression per gene between the two time points (start vs end).
-
-```{r}
-#| label: DEG_Time_point
-#| echo: FALSE
-#-------------- ANALYSIS OF SEX DIFFERENCES --------------##
-#fix individual with missing sex
-d_n_pups$samples["T21_SSB_pup_start_2019B", "sex"] <- "F"
-#factor
-d_n_pups$samples$sex <- factor(d_n_pups$samples$sex)
-design_pup <- model.matrix(~ -1 + sex, data = d_n_pups$samples) 
-colnames(design_pup) <- gsub("sex", "", colnames(design_pup)) #clean group names
-
-contr.matrix_pup <- makeContrasts(
- M_vs_F = M-F,
- levels = colnames(design_pup)) #create matrix for contrasts
-
-#voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-vobj_pup <- voom(d_n_pups, design_pup, plot=TRUE)
-
-# # Fit a random effect
-dupcor_pup <- duplicateCorrelation(vobj_pup, design_pup, block = d_n_pups$samples$ID)
-dupcor_pup$consensus #the estimated intra individual correlation (0.1801072)
-# #the intra individual correlation will change the voom weights slightly
-# #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
-vobj_pup = voom(d_n_pups, design_pup, plot=TRUE,
-            block=d_n_pups$samples$ID, correlation=dupcor_pup$consensus)
-#update the correlation for the new voom weights
-dupcor_pup <- duplicateCorrelation(vobj_pup, design_pup, block = d_n_pups$samples$ID)
-dupcor_pup$consensus #the estimated intra individual correlation (0.1801236)
-# #Fit the model
-# # But this step uses only the genome-wide average for the random effect
-vfit_pup <- lmFit(vobj_pup, design_pup, block=d_n_pups$samples$ID, correlation=dupcor_pup$consensus)
-vfit_pup <- contrasts.fit(vfit_pup, contrasts=contr.matrix_pup)
-
-# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
-efit_pup <- eBayes(vfit_pup)
-topTable(efit_pup, n=20)
-plotSA(efit_pup, main="Final model: Mean-variance trend")
-plotMD(efit_pup)
-abline(h=0,col="darkgrey")
-
-#adjusted p-value cutoff that is set at 5% by default.
-efit_pup$F
-head(efit_pup$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA), it combines all contrast, so in this case it is the same as the t-statistic
-head(efit_pup$p.value) #same
-summary(decideTests(efit_pup, adjust.method="fdr"))
-
-tfit_pup <- treat(vfit_pup, lfc=lfc) #lfc = 1, lfc_half = 0.5
-topTreat(tfit_pup)
-nrow(tfit_pup)
-dt_pup <- decideTests(tfit_pup, adjust.method="fdr")
-summary(dt_pup) 
 ```
