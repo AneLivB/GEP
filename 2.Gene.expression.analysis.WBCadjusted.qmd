@@ -357,7 +357,7 @@ rm(counts_per_million, density_plot, df_long, df_melted, log_counts_per_million,
 
 # Differential gene expression analysis
 
-In this section, we will perform differential gene expression analysis to identify genes that are differentially expressed between the four main contasts: Time point, Life hisotry stage, Colony and Season.
+In this section, we will perform differential gene expression analysis to identify genes that are differentially expressed between the four main contrasts: Time point, Life history stage, Colony and Season.
 
 ```{r}
 #| label: color_scheme
@@ -874,7 +874,7 @@ Creating a heatmap to visualise the differentially expressed genes between the t
 ```{r}
 #| label: heatmap_lhs
 #| echo: FALSE
-#Create heatmap for differentially expressed genes between time points
+#Create heatmap for differentially expressed genes between life history stages
 DEG_lhs <- rownames(Filteredgenes_lhs_WBC)
 
 #Extract the expression values for the differentially expressed genes
@@ -1109,9 +1109,9 @@ ggsave(here::here("Plots","DEG_TPLHS_adj.png"), plot = DEG_TPLHS, width = 7, hei
 
 ![Differential gene expression analysis](Plots/DEG_TPLHS.png)
 
- # GOterms using clusterProfiler
+#GOterms using clusterProfiler
 
-In this section, we are conducting a gene ontology (GO) enrichment using Clusterprofiler to identify biological processes significantly associated with differentially expressed genes.
+In this section, we are conducting a gene ontology (GO) enrichment analysis using Clusterprofiler to identify biological processes significantly associated with differentially expressed genes.
 
 ```{r}
 #| label: load_packages_for_GO
