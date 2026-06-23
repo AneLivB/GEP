@@ -124,7 +124,7 @@ PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage)) 
   stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "(c) Life history stage", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
+  labs(title = "(c) Life-history stage", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
 
 #levels(pc_scores$year)
 levels(pc_scores$year) <- c("2019", "2020")
@@ -144,7 +144,7 @@ PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group)) +
   stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "(d) Time point", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
+  labs(title = "(d) Developmental time point", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
 
 PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
   geom_point(size = 2) +
@@ -152,7 +152,7 @@ PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
   stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "(a) Colony", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
+  labs(title = "(a) Density", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
 
 legend_theme_outlier <- theme(
     legend.position = c(0.05, 0.95), 
@@ -188,7 +188,7 @@ PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage, s
   scale_shape_manual(values = c(16,17)) +
   xlim(-200, 200) +
   ylim(-200, 200) +
-  labs(title = "(c) Life history stage", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL, shape = NULL)
+  labs(title = "(c) Life-history stage", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL, shape = NULL)
 
 #levels(pc_scores$group)
 levels(pc_scores$group) <- c("Day zero", "Day 60")
@@ -222,7 +222,7 @@ PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony, shape = colony)
   scale_shape_manual(values = c(16,17)) +
   xlim(-200, 200) +
   ylim(-200, 200) +  
-  labs(title = "(a) Social density", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL, shape = NULL)
+  labs(title = "(a) Density", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL, shape = NULL)
 
 legend_theme <- theme(
     legend.position = c(0.95, 0.95), 
@@ -428,7 +428,7 @@ combined_tp_plot_adj <- ggplot(Allgenes_end_vs_start, aes(x = logFC, y = -log10(
   geom_point() +
   scale_color_manual(values = clrs) +  
   scale_size_manual(values = c(1, 0.5, 1)) +
-  labs(title = "(b) Time point", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
+  labs(title = "(b) Developmental time point", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
   theme_classic() +
   ylim(0,45) +
   xlim(-4.2,4.2) +
@@ -442,7 +442,7 @@ combined_lhs_plot_adj <- ggplot(Allgenes_adult_vs_pup, aes(x = logFC, y = -log10
   geom_point() +
   scale_color_manual(values = clrs) +  
   scale_size_manual(values = c(1, 0.5, 1)) +
-  labs(title = "(a) Life history stage", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
+  labs(title = "(a) Life-history stage", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
   theme_classic() +
   ylim(0,45) +
   xlim(-4.2,4.2) +
@@ -608,7 +608,7 @@ GO_end_vs_start_DOWN <- enrichGO(Downregulated_end_vs_start$GeneSymbol,
 GO_end_vs_start_DOWN <- GO_end_vs_start_DOWN %>%
   mutate(Regulation = "Downregulated") 
 
-GO_end_vs_start_UP <- enrichGO(Upregulated_end_vs_start_WBC$GeneSymbol,
+GO_end_vs_start_UP <- enrichGO(Upregulated_end_vs_start$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
                        universe = Background_tp_combined$GeneSymbol,
                        keyType = "SYMBOL",
@@ -620,7 +620,7 @@ GO_end_vs_start_UP <- GO_end_vs_start_UP %>%
 
 #Life history stage
 #Downregulated_lhs <- Downregulated_lhs[,-1]  #If the code doesn't run as it's supposed to
-GO_adult_vs_pup_DOWN <- enrichGO(Downregulated_adult_vs_pup_WBC$GeneSymbol,
+GO_adult_vs_pup_DOWN <- enrichGO(Downregulated_adult_vs_pup$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
                        universe = Background_lhs_combined$GeneSymbol,
                        keyType = "SYMBOL",
@@ -630,7 +630,7 @@ GO_adult_vs_pup_DOWN <- enrichGO(Downregulated_adult_vs_pup_WBC$GeneSymbol,
 GO_adult_vs_pup_DOWN <- GO_adult_vs_pup_DOWN %>%
   mutate(Regulation = "Downregulated") 
 
-GO_adult_vs_pup_UP <- enrichGO(Upregulated_adult_vs_pup_WBC$GeneSymbol,
+GO_adult_vs_pup_UP <- enrichGO(Upregulated_adult_vs_pup$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
                        universe = Background_lhs_combined$GeneSymbol,
                        keyType = "SYMBOL",
@@ -676,7 +676,7 @@ plot_end_vs_start <- ggplot(GO_end_vs_start_combined, aes(x = zScore, y = -log10
   max.overlaps = Inf
 ) +
   labs(
-    title = "(b) Time point",
+    title = "(b) Developmental time point",
     x = "Z-score",
     y = expression(-log[10]("Adjusted p-value")),
     shape = "Regulation"
@@ -757,7 +757,7 @@ plot_adult_vs_pup <- ggplot(GO_adult_vs_pup_combined, aes(x = zScore, y = -log10
   max.overlaps = Inf
 ) +
   labs(
-    title = "(b) Time point",
+    title = "(a) Life-history stage",
     x = "Z-score",
     y = expression(-log[10]("Adjusted p-value")),
     shape = "Regulation"
