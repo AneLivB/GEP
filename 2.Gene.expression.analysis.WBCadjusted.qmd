@@ -291,7 +291,6 @@ boxplot(bd_tp, main = "Dispersion by developmental time point")
 
 ```
 
-
 ```{r}
 #| label: Nice_tables
 #| echo: FALSE
@@ -580,8 +579,8 @@ tp_plot_adj <- ggplot(Allgenes_tp_adj, aes(x = logFC, y = -log10(adj.P.Val), col
     legend.position = "bottom",
     plot.title.position = "plot")
 ```
-Correcting for the white blood cell ratio does slightly change the differentially expressed genes, so we'll retain both and compare them moving forward. 
-### Heatmap
+
+Correcting for the white blood cell ratio does slightly change the differentially expressed genes, so we'll retain both and compare them moving forward. \### Heatmap
 
 Creating a heatmap to visualise the differentially expressed genes between the two start points.
 
@@ -1205,6 +1204,7 @@ GO_LHS_UP <- GO_LHS_UP %>%
 ```
 
 ## Gene ontology: Adjusted
+
 ```{r}
 #| label: Enrichment_analysis
 #| echo: FALSE
@@ -1256,6 +1256,7 @@ GO_LHS_UP_adj <- GO_LHS_UP_adj %>%
 ## Top 20 enriched GOterms (biological process)
 
 ### Time point
+
 ```{r}
 #| label: Top20_TP
 #| echo: FALSE
@@ -1339,6 +1340,7 @@ ggsave(here::here("Plots","Bubble_TP.png"), plot = plot_TP + fig_theme + theme(l
 ```
 
 ### Time point (adjusted)
+
 ```{r}
 #| label: Top20_TP
 #| echo: FALSE
@@ -1611,6 +1613,7 @@ SM_GO_LHS_UP <- calculateSimMatrix(GO_LHS_UP$ID, orgdb = "org.Hs.eg.db", ont = "
 ```
 
 #### Adjusted
+
 ```{r}
 #| label: Similarity_matrices
 #| echo: FALSE
@@ -1672,7 +1675,9 @@ reduced_LHS_DOWN <- reduceSimMatrix(
     threshold = 0.7,
     orgdb = "org.Hs.eg.db")
 ```
-#### Adjusted 
+
+#### Adjusted
+
 ```{r}
 #| label: Reduce_terms
 #| echo: FALSE
@@ -1753,6 +1758,7 @@ ggsave(here::here("Plots","SP_TP_GO_WBC.png"), plot = SP_TP_GO, width = 9, heigh
 ![Semantic similarity of GOterms (Time point)](Plots/SP_TP_GO.png) \### Life history stage
 
 #### TP: Adjusted
+
 ```{r}
 #| label: scatterplot_time_point
 #| echo: FALSE
@@ -1816,7 +1822,8 @@ combined_SP <- plot_grid(SP_TP_GO, SP_LHS_GO, ncol = 1)
 ggsave(here::here("Plots","combined_SP.png"), plot = combined_SP, width = 7, height = 7, dpi = 600)
 ```
 
-#### Adjusted 
+#### Adjusted
+
 ```{r}
 #| label: scatterplot_life_history_stage
 #| echo: FALSE
@@ -1974,8 +1981,8 @@ combined_SP <- plot_grid(SP_LHS_GO, SP_TP_GO, ncol = 1)
 ggsave(here::here("Plots","combined_SP.png"), plot = combined_SP, width = 7, height = 7, dpi = 600)
 ```
 
-![Semantic similarity of GOterms (Life history stage)](Plots/combined_SP.png)
-#### Adjusted
+![Semantic similarity of GOterms (Life history stage)](Plots/combined_SP.png) \#### Adjusted
+
 ```{r}
 #| label: scatterplot_manual
 #| echo: FALSE
