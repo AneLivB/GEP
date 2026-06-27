@@ -64,6 +64,12 @@ invisible(pacman::p_load(dplyr, readxl, tidyverse, cowplot, edgeR, DESeq2, RColo
 #Mutate all needed predictors into factors
 d_n<-readRDS("rnaseq_filtered_Liv.Rdata")  
 #dim(d_n) 12639 rows
+
+#Sequencing depth
+sequences <- read.delim("multiqc_fastqc.txt", header = TRUE, sep = "\t")
+sum(sequences$Total.Sequences)
+summary(sequences$Total.Sequences)
+
 ## White blood counts
 WBC <- read_excel("WBCcounts_GEP.xlsx")
 
@@ -94,6 +100,15 @@ d_n_WBC$samples$pair <- as.factor(d_n_WBC$samples$pair)
 rm(d_n)
 dim(d_n_WBC)
 table(d_n_WBC$samples$pair)
+
+#PC scores from genomic matrix
+Genomic_PCS <- read_csv("GenomicPC_scores_GEP.csv")
+Genomic_PCS <- subset(Genomic_PCS, select = c(PC1, PC2, PC3, PC4, PC5, ID.y, Sample))
+colnames(Genomic_PCS) <- "ID"
+Genomic_PCS$ID <- as.factor(Genomic_PCS$ID)
+#Combine
+d_n_all <- d_n_WBC
+d_n_all$samples <- left_join(d_n_all$samples, Genomic_PCS, by = c("Sample", "ID"))
 ```
 
 # PCA
@@ -105,7 +120,7 @@ Create a PCA plot to identify outliers.
 #| echo: FALSE
 #| message: false
 #Use PCA to identify outliers. F24_FWB_mum_start_2018B was already removed at an earlier state
-cpm_mat <- cpm(d_n_WBC, log=TRUE)  #we need the log values
+cpm_mat <- cpm(d_n_all, log=TRUE)  #we need the log values
 exprs_mat <- cpm_mat
 exprs_t <- t(exprs_mat) #transpose
 pca_result <- prcomp(exprs_t, center = TRUE, scale. = TRUE)
@@ -116,19 +131,20 @@ round(pca_var_explained[1:2] * 100, 2)
 
 pc_scores <- as.data.frame(pca_result$x[, 1:2])  #keep PC1 and PC2
 pc_scores$Sample <- rownames(pc_scores)
-pc_scores <- left_join(pc_scores, d_n_WBC$samples, by = "Sample")
+colnames(pc_scores) <- c("PC1_GE", "PC2_GE", "Sample")
+pc_scores <- left_join(pc_scores, d_n_all$samples, by = "Sample")
 
-PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage)) +
+PCA_LHS <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = life_history_stage)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
   xlim(-400, 150) +
   ylim(-150, 150) +
-  labs(title = "(c) Life-history stage", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
+  labs(title = "(c) Life-history stage", x = "PC1_GE (23 %)", y = "PC2 (13 %)", color = NULL)
 
 #levels(pc_scores$year)
 levels(pc_scores$year) <- c("2019", "2020")
-PCA_Y <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = year)) +
+PCA_Y <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = year)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
@@ -138,7 +154,7 @@ PCA_Y <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = year)) +
 
 #levels(pc_scores$group)
 levels(pc_scores$group) <- c("Day 0", "Day 60")
-PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group)) +
+PCA_TP <- ggplot(pc_scores, aes(x = PC1_GE_GE, y = PC2_GE, color = group)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
@@ -146,7 +162,7 @@ PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group)) +
   ylim(-150, 150) +
   labs(title = "(d) Developmental time point", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
 
-PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony)) +
+PCA_C <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = colony)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
@@ -180,7 +196,7 @@ rm(exprs_mat, exprs_t, cpm_mat)
 #| echo: FALSE
 #| message: false
 #Plot in accordance to LHS and TP
-PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage, shape = life_history_stage)) +
+PCA_LHS <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = life_history_stage, shape = life_history_stage)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
@@ -192,7 +208,7 @@ PCA_LHS <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = life_history_stage, s
 
 #levels(pc_scores$group)
 levels(pc_scores$group) <- c("Day zero", "Day 60")
-PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group, shape = group)) +
+PCA_TP <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = group, shape = group)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
@@ -204,7 +220,7 @@ PCA_TP <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = group, shape = group))
 
 #levels(pc_scores$year)
 levels(pc_scores$year) <- c("2019", "2020")
-PCA_Y <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = year, shape = year)) +
+PCA_Y <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = year, shape = year)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
@@ -214,7 +230,7 @@ PCA_Y <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = year, shape = year)) +
   ylim(-200, 200) +
   labs(title = "(b) Food availability", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL, shape = NULL)
 
-PCA_C <- ggplot(pc_scores, aes(x = PC1, y = PC2, color = colony, shape = colony)) +
+PCA_C <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = colony, shape = colony)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
@@ -270,7 +286,7 @@ ann_colors <- list(
 
 ## Combined analysis
 
-Differential gene expression analysis combined for all contrasts.
+Differential gene expression analysis combined for all contrasts and adding pair to control for repeated sampling and similarity between mums and pups.
 
 ```{r}
 #| label: DEG_Combined
@@ -278,11 +294,11 @@ Differential gene expression analysis combined for all contrasts.
 
 #You need to explicitly set the reference levels
 #Time point = group will have both but for the rest
-d_n_WBC$samples$life_history_stage <- relevel(d_n_WBC$samples$life_history_stage, ref = "Pup")
-d_n_WBC$samples$colony <- relevel(d_n_WBC$samples$colony, ref = "FWB")
-d_n_WBC$samples$year <- relevel(d_n_WBC$samples$year, ref = "2019_2020")
+d_n_all$samples$life_history_stage <- relevel(d_n_all$samples$life_history_stage, ref = "Pup")
+d_n_all$samples$colony <- relevel(d_n_all$samples$colony, ref = "FWB")
+d_n_all$samples$year <- relevel(d_n_all$samples$year, ref = "2019_2020")
 
-design_combined <- model.matrix(~ 0 + group + life_history_stage + colony + year, data = d_n_WBC$samples) #setting up model contrasts is more straight forward in the absence of an intercept 
+design_combined <- model.matrix(~ 0 + group + life_history_stage + colony + year, data = d_n_all$samples) #setting up model contrasts is more straight forward in the absence of an intercept 
 colnames(design_combined)
 contr.matrix.combined <- makeContrasts(
  end_vs_start = group2-group1,
@@ -291,20 +307,20 @@ contr.matrix.combined <- makeContrasts(
  Season1vsSeason2 = year2018_2019,
  levels = design_combined) #create matrix for contrasts
 # Use voom to remove variance dependency on mean
-vobj_combined <- voom(d_n_WBC, design_combined, plot=TRUE)
+vobj_combined <- voom(d_n_all, design_combined, plot=TRUE)
 # 
 # # Fit a random effect
-dupcor_combined <- duplicateCorrelation(vobj_combined, design_combined, block = d_n_WBC$samples$ID)
-dupcor_combined$consensus #the estimated intra individual correlation (0.2103193)
+dupcor_combined <- duplicateCorrelation(vobj_combined, design_combined, block = d_n_all$samples$pair)
+dupcor_combined$consensus #the estimated intra individual correlation (0.1389558)
 # #the intra individual correlation will change the voom weights slightly
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
-vobj_combined = voom(d_n_WBC, design_combined, plot=TRUE,
-            block=d_n_WBC$samples$ID, correlation=dupcor_combined$consensus)
+vobj_combined = voom(d_n_all, design_combined, plot=TRUE,
+            block=d_n_all$samples$pair, correlation=dupcor_combined$consensus)
 #update the correlation for the new voom weights
-dupcor_combined <- duplicateCorrelation(vobj_combined, design_combined, block = d_n_WBC$samples$ID)
-dupcor_combined$consensus #the estimated intra individual correlation (0.2103055)
+dupcor_combined <- duplicateCorrelation(vobj_combined, design_combined, block = d_n_all$samples$pair)
+dupcor_combined$consensus #the estimated intra individual correlation (0.1389573)
 #Fit the model
-vfit_combined <- lmFit(vobj_combined, design_combined, block=d_n_WBC$samples$ID, correlation=dupcor_combined$consensus)
+vfit_combined <- lmFit(vobj_combined, design_combined, block=d_n_all$samples$pair, correlation=dupcor_combined$consensus)
 vfit_combined <- contrasts.fit(vfit_combined, contrasts=contr.matrix.combined)
 
 # Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
@@ -336,7 +352,7 @@ Outcome similar to the marginal differential gene expression analyses. We will p
 #| label: DEG_Combined_Adjusted
 #| echo: FALSE
 
-design_combined_adj <- model.matrix(~ 0 + group + life_history_stage + colony + year + WBC_ratio_log, data = d_n_WBC$samples) 
+design_combined_adj <- model.matrix(~ 0 + group + life_history_stage + colony + year + WBC_ratio_log, data = d_n_all$samples) 
 nrow(design_combined_adj)
 
 contr.matrix.combined.adj <- makeContrasts(
@@ -348,20 +364,20 @@ contr.matrix.combined.adj <- makeContrasts(
 
 # Use voom to remove variance dependency on mean,
 #voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
-vobj_combined_adj <- voom(d_n_WBC, design_combined_adj, plot=TRUE)
+vobj_combined_adj <- voom(d_n_all, design_combined_adj, plot=TRUE)
 # 
 # # Fit a random effect
-dupcor_combined_adj <- duplicateCorrelation(vobj_combined_adj, design_combined_adj, block = d_n_WBC$samples$ID)
-dupcor_combined_adj$consensus #the estimated intra individual correlation (0.2050061)
+dupcor_combined_adj <- duplicateCorrelation(vobj_combined_adj, design_combined_adj, block = d_n_all$samples$pair)
+dupcor_combined_adj$consensus #the estimated intra individual correlation (0.1339424)
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
-vobj_combined_adj = voom(d_n_WBC, design_combined_adj, plot=TRUE,
-            block=d_n_WBC$samples$ID, correlation=dupcor_combined_adj$consensus)
+vobj_combined_adj = voom(d_n_all, design_combined_adj, plot=TRUE,
+            block=d_n_all$samples$pair, correlation=dupcor_combined_adj$consensus)
 #update the correlation for the new voom weights
-dupcor_combined_adj <- duplicateCorrelation(vobj_combined_adj, design_combined_adj, block = d_n_WBC$samples$ID)
-dupcor_combined_adj$consensus #the estimated intra individual correlation (0.20502)
+dupcor_combined_adj <- duplicateCorrelation(vobj_combined_adj, design_combined_adj, block = d_n_all$samples$pair)
+dupcor_combined_adj$consensus #the estimated intra individual correlation (0.1339639)
 
 #Fit the model
-vfit_combined_adj <- lmFit(vobj_combined_adj, design_combined_adj, block=d_n_WBC$samples$ID, correlation=dupcor_combined_adj$consensus)
+vfit_combined_adj <- lmFit(vobj_combined_adj, design_combined_adj, block=d_n_all$samples$pair, correlation=dupcor_combined_adj$consensus)
 vfit_combined_adj <- contrasts.fit(vfit_combined_adj, contrasts=contr.matrix.combined.adj)
 # 
 # Save the model to avoid recomputing everything
@@ -388,41 +404,106 @@ topTreat(tfit_combined_adj)
 nrow(tfit_combined_adj)
 dt_combined_adj <- decideTests(tfit_combined_adj, adjust.method="fdr")
 summary(dt_combined_adj) 
+```
+
+Correcting for the white blood cell ratio does slightly change the differentially expressed genes, so we'll retain both and compare them moving forward.
+
+We then added genomic relatedness via PC scores to the model to account for genetic relatedness among individuals
+
+### Adjusted combined control for ID_Pairs 
+ 
+```{r}
+#| label: DEG_Combined_Pairs
+#| echo: FALSE
+
+design_pairs <- model.matrix(~ 0 + group + life_history_stage + colony + year + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5, data = d_n_all$samples) 
+nrow(design_pairs)
+colnames(design_pairs)
+
+contr.matrix.pairs <- makeContrasts(
+ end_vs_start = group2-group1,
+ adult_vs_pup = life_history_stageMother,
+ high_vs_low = colonySSB,
+ Season1vsSeason2 = year2018_2019,
+ levels = design_pairs)
+
+# Use voom to remove variance dependency on mean,
+#voom() converts the read counts to log2-cpm, with associated weights, ready for linear modelling
+vobj_pairs <- voom(d_n_all, design_pairs, plot=TRUE)
+# 
+# # Fit a random effect
+dupcor_pairs <- duplicateCorrelation(vobj_all, design_pairs, block = d_n_all$samples$pair)
+dupcor_pairs$consensus #the estimated intra individual correlation (0.1337848)
+# #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
+vobj_pairs = voom(d_n_all, design_pairs, plot=TRUE,
+            block=d_n_all$samples$pair, correlation=dupcor_pairs$consensus)
+#update the correlation for the new voom weights
+dupcor_pairs <- duplicateCorrelation(vobj_pairs, design_pairs, block = d_n_all$samples$pair)
+dupcor_pairs$consensus #the estimated intra individual correlation (0.133939)
+
+#Fit the model
+vfit_pairs <- lmFit(vobj_pairs, design_pairs, block=d_n_all$samples$pair, correlation=dupcor_pairs$consensus)
+vfit_pairs <- contrasts.fit(vfit_pairs, contrasts=contr.matrix.pairs)
+# 
+# Save the model to avoid recomputing everything
+# save vfit_pairs
+saveRDS(vfit_pairs, file = here::here("Models","vfit_pairs.rds"))
+
+#Load vfit_pairs
+vfit_pairs <- readRDS(here::here("Models","vfit_pairs.rds"))
+
+efit_pairs <- eBayes(vfit_pairs)
+topTable(efit_pairs, n=20)
+plotSA(efit_pairs, main="Final model: Mean-variance trend")
+plotMD(efit_pairs)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit_pairs$F
+head(efit_pairs$F.p.value) 
+head(efit_pairs$p.value) 
+summary(decideTests(efit_pairs, adjust.method="fdr"))
+
+tfit_pairs <- treat(vfit_pairs, lfc=lfc) #lfc = 1, lfc_half = 0.5
+topTreat(tfit_pairs)
+nrow(tfit_pairs)
+dt_pairs <- decideTests(tfit_pairs, adjust.method="fdr")
+summary(dt_pairs) 
 
 #Test for significance
 #Time point
-Allgenes_end_vs_start <- as.data.frame(topTreat(tfit_combined_adj, coef = "end_vs_start", n = Inf))
-Filtered_end_vs_start <- subset(Allgenes_end_vs_start, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
-Upregulated_end_vs_start <- subset(Filtered_end_vs_start, Filtered_end_vs_start$logFC >= lfc)
-Downregulated_end_vs_start <- subset(Filtered_end_vs_start, Filtered_end_vs_start$logFC <= lfc)
+Allgenes_end_vs_start_pairs <- as.data.frame(topTreat(tfit_pairs, coef = "end_vs_start", n = Inf))
+Filtered_end_vs_start_pairs <- subset(Allgenes_end_vs_start_pairs, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
+Upregulated_end_vs_start_pairs <- subset(Filtered_end_vs_start_pairs, Filtered_end_vs_start_pairs$logFC >= lfc)
+Downregulated_end_vs_start_pairs <- subset(Filtered_end_vs_start_pairs, Filtered_end_vs_start_pairs$logFC <= lfc)
 
 #Life history stage
-Allgenes_adult_vs_pup <- as.data.frame(topTreat(tfit_combined_adj, coef = "adult_vs_pup", n = Inf))
-Filtered_adult_vs_pup <- subset(Allgenes_adult_vs_pup, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
-Upregulated_adult_vs_pup <- subset(Filtered_adult_vs_pup, Filtered_adult_vs_pup$logFC >= lfc)
-Downregulated_adult_vs_pup <- subset(Filtered_adult_vs_pup, Filtered_adult_vs_pup$logFC <= lfc)
+Allgenes_adult_vs_pup_pairs <- as.data.frame(topTreat(tfit_pairs, coef = "adult_vs_pup", n = Inf))
+Filtered_adult_vs_pup_pairs <- subset(Allgenes_adult_vs_pup_pairs, abs(logFC) >= lfc & adj.P.Val < adj.P.value)
+Upregulated_adult_vs_pup_pairs <- subset(Filtered_adult_vs_pup_pairs, Filtered_adult_vs_pup_pairs$logFC >= lfc)
+Downregulated_adult_vs_pup_pairs <- subset(Filtered_adult_vs_pup_pairs, Filtered_adult_vs_pup_pairs$logFC <= lfc)
 
 # Create a list to save the up and down regulated genes and the df containing all genes evaluated for GO analysis
-Combined_list_adj <- list(Allgenes_end_vs_start = Allgenes_end_vs_start, Upregulated_end_vs_start = Upregulated_end_vs_start, Downregulated_end_vs_start = Downregulated_end_vs_start, Allgenes_adult_vs_pup = Allgenes_adult_vs_pup, Upregulated_adult_vs_pup = Upregulated_adult_vs_pup, Downregulated_adult_vs_pup = Downregulated_adult_vs_pup)
+Combined_list_pairs <- list(Allgenes_end_vs_start_pairs = Allgenes_end_vs_start_pairs, Upregulated_end_vs_start_pairs = Upregulated_end_vs_start_pairs, Downregulated_end_vs_start_pairs = Downregulated_end_vs_start_pairs, Allgenes_adult_vs_pup_pairs = Allgenes_adult_vs_pup_pairs, Upregulated_adult_vs_pup_pairs = Upregulated_adult_vs_pup_pairs, Downregulated_adult_vs_pup_pairs = Downregulated_adult_vs_pup_pairs)
 
 # Loop through and save each data frame using `here()`
-for (name in names(Combined_list_adj)) {
-  write.csv(Combined_list_adj[[name]], file = here::here("GenesGO", paste0(name, ".csv")), row.names = TRUE)
+for (name in names(Combined_list_pairs)) {
+  write.csv(Combined_list_pairs[[name]], file = here::here("GenesGO", paste0(name, ".csv")), row.names = TRUE)
 }
 
 #Significance
-Allgenes_end_vs_start$Significance <- "Not significant"
-Allgenes_end_vs_start$Significance[Allgenes_end_vs_start$adj.P.Val < adj.P.value & Allgenes_end_vs_start$logFC >= lfc] <- "Upregulated"
-Allgenes_end_vs_start$Significance[Allgenes_end_vs_start$adj.P.Val < adj.P.value & Allgenes_end_vs_start$logFC <= -lfc] <- "Downregulated"
-Allgenes_end_vs_start
+Allgenes_end_vs_start_pairs$Significance <- "Not significant"
+Allgenes_end_vs_start_pairs$Significance[Allgenes_end_vs_start_pairs$adj.P.Val < adj.P.value & Allgenes_end_vs_start_pairs$logFC >= lfc] <- "Upregulated"
+Allgenes_end_vs_start_pairs$Significance[Allgenes_end_vs_start_pairs$adj.P.Val < adj.P.value & Allgenes_end_vs_start_pairs$logFC <= -lfc] <- "Downregulated"
+Allgenes_end_vs_start_pairs
 
-Allgenes_adult_vs_pup$Significance <- "Not significant"
-Allgenes_adult_vs_pup$Significance[Allgenes_adult_vs_pup$adj.P.Val < adj.P.value & Allgenes_adult_vs_pup$logFC >= lfc] <- "Upregulated"
-Allgenes_adult_vs_pup$Significance[Allgenes_adult_vs_pup$adj.P.Val < adj.P.value & Allgenes_adult_vs_pup$logFC <= -lfc] <- "Downregulated"
-Allgenes_adult_vs_pup
+Allgenes_adult_vs_pup_pairs$Significance <- "Not significant"
+Allgenes_adult_vs_pup_pairs$Significance[Allgenes_adult_vs_pup_pairs$adj.P.Val < adj.P.value & Allgenes_adult_vs_pup_pairs$logFC >= lfc] <- "Upregulated"
+Allgenes_adult_vs_pup_pairs$Significance[Allgenes_adult_vs_pup_pairs$adj.P.Val < adj.P.value & Allgenes_adult_vs_pup_pairs$logFC <= -lfc] <- "Downregulated"
+Allgenes_adult_vs_pup_pairs
 
 #Plot volcano plot
-combined_tp_plot_adj <- ggplot(Allgenes_end_vs_start, aes(x = logFC, y = -log10(adj.P.Val), color = Significance, size = Significance)) +
+combined_tp_plot_pairs <- ggplot(Allgenes_end_vs_start_pairs, aes(x = logFC, y = -log10(adj.P.Val), color = Significance, size = Significance)) +
   geom_hline(yintercept = -log10(0.05), col = "gray", linetype = 'dashed') +
   geom_vline(xintercept = c(-1, 1), col = "gray", linetype = 'dashed') +
   geom_point() +
@@ -430,13 +511,13 @@ combined_tp_plot_adj <- ggplot(Allgenes_end_vs_start, aes(x = logFC, y = -log10(
   scale_size_manual(values = c(1, 0.5, 1)) +
   labs(title = "(b) Developmental time point", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
   theme_classic() +
-  ylim(0,45) +
+  ylim(0,50) +
   xlim(-4.2,4.2) +
   theme(
     legend.position = "bottom",
     plot.title.position = "plot")
 
-combined_lhs_plot_adj <- ggplot(Allgenes_adult_vs_pup, aes(x = logFC, y = -log10(adj.P.Val), color = Significance, size = Significance)) +
+combined_lhs_plot_pairs <- ggplot(Allgenes_adult_vs_pup_pairs, aes(x = logFC, y = -log10(adj.P.Val), color = Significance, size = Significance)) +
   geom_hline(yintercept = -log10(0.05), col = "gray", linetype = 'dashed') +
   geom_vline(xintercept = c(-1, 1), col = "gray", linetype = 'dashed') +
   geom_point() +
@@ -444,22 +525,25 @@ combined_lhs_plot_adj <- ggplot(Allgenes_adult_vs_pup, aes(x = logFC, y = -log10
   scale_size_manual(values = c(1, 0.5, 1)) +
   labs(title = "(a) Life-history stage", x = expression("log"[2]*"FC"), y = expression("-log"[10]*" adjusted p-value")) +
   theme_classic() +
-  ylim(0,45) +
+  ylim(0,50) +
   xlim(-4.2,4.2) +
   theme(
     legend.position = "bottom",
     plot.title.position = "plot")
+
 ```
 
-Correcting for the white blood cell ratio does slightly change the differentially expressed genes, so we'll retain both and compare them moving forward.
+Correcting for pc values accounting for genetic relatedness also slightly changed the differentially expressed genes, so we will move on with the analysis on this model.  
 
 ```{r}
 #| label: Combined_Adjusted
 #| echo: FALSE
 #Plot for only time point and life history stage
-DEG_Combined_TPLHS <- ggarrange(combined_lhs_plot_adj + fig_theme, combined_tp_plot_adj + fig_theme + theme(axis.title.y = element_blank()), common.legend = T, legend = "bottom", widths = c(1, 0.95))
-ggsave(here::here("Plots","DEG_Combined_TPLHS_adj.png"), plot = DEG_Combined_TPLHS, width = 7, height = 3.5, dpi = 600)
+DEG_Combined_TPLHS_pairs <- ggarrange(combined_lhs_plot_pairs + fig_theme, combined_tp_plot_pairs + fig_theme + theme(axis.title.y = element_blank()), common.legend = T, legend = "bottom", widths = c(1, 0.95))
+ggsave(here::here("Plots","DEG_Combined_TPLHS_pairs.png"), plot = DEG_Combined_TPLHS_pairs, width = 7, height = 3.5, dpi = 600)
 ```
+
+
 
 ### Heatmap
 
@@ -471,42 +555,42 @@ Creating a heatmap to visualise the differentially expressed genes between the t
 ### Time point & Life history stage
 ###Adjusted
 #Time point
-DEG_combined_tp_adj <- rownames(Filtered_end_vs_start)
+DEG_combined_tp_pairs <- rownames(Filtered_end_vs_start_pairs)
 
 #Life history stage
-DEG_combined_lhs_adj <- rownames(Filtered_adult_vs_pup)
+DEG_combined_lhs_pairs <- rownames(Filtered_adult_vs_pup_pairs)
 
 #Extract the expression values for the differentially expressed genes
-expression_combined_tp_adj <- vobj_combined_adj$E[DEG_combined_tp_adj, ]
-expression_combined_lhs_adj <- vobj_combined_adj$E[DEG_combined_lhs_adj, ]
+expression_combined_tp_pairs <- vobj_pairs$E[DEG_combined_tp_pairs, ]
+expression_combined_lhs_pairs <- vobj_pairs$E[DEG_combined_lhs_pairs, ]
 
 #get labels (Time point)
-annotation_combined_tp_adj <- data.frame(TP = as.factor(d_n_WBC$samples$group))
-rownames(annotation_combined_tp_adj) <- d_n_WBC$samples$Sample
-annotation_combined_tp_adj$TP <- ifelse(annotation_combined_tp_adj$TP == 1, "Day 0", "Day 60")
-annotation_combined_tp_adj$TP <- factor(annotation_combined_tp_adj$TP, levels = c("Day 0", "Day 60"))
+annotation_combined_tp_pairs <- data.frame(TP = as.factor(d_n_all$samples$group))
+rownames(annotation_combined_tp_pairs) <- d_n_all$samples$Sample
+annotation_combined_tp_pairs$TP <- ifelse(annotation_combined_tp_pairs$TP == 1, "Day 0", "Day 60")
+annotation_combined_tp_pairs$TP <- factor(annotation_combined_tp_pairs$TP, levels = c("Day 0", "Day 60"))
 
-matrix_combined_tp_adj <- expression_combined_tp_adj[, order(annotation_combined_tp_adj$TP)]
-annotation_combined_tp_adj <- annotation_combined_tp_adj[order(annotation_combined_tp_adj$TP), , drop = FALSE]
+matrix_combined_tp_pairs <- expression_combined_tp_pairs[, order(annotation_combined_tp_pairs$TP)]
+annotation_combined_tp_pairs <- annotation_combined_tp_pairs[order(annotation_combined_tp_pairs$TP), , drop = FALSE]
 
 #get labels (Life history stage)
-annotation_combined_lhs_adj <- data.frame(LHS = as.factor(d_n_WBC$samples$life_history_stage))
-rownames(annotation_combined_lhs_adj) <- d_n_WBC$samples$Sample
-annotation_combined_lhs_adj$LHS <- factor(annotation_combined_lhs_adj$LHS, levels = c("Mother", "Pup"))
+annotation_combined_lhs_pairs <- data.frame(LHS = as.factor(d_n_all$samples$life_history_stage))
+rownames(annotation_combined_lhs_pairs) <- d_n_all$samples$Sample
+annotation_combined_lhs_pairs$LHS <- factor(annotation_combined_lhs_pairs$LHS, levels = c("Mother", "Pup"))
 
 #order the expression values
-matrix_combined_lhs_adj <- expression_combined_lhs_adj[, order(annotation_combined_lhs_adj$LHS)]
-annotation_combined_lhs_adj <- annotation_combined_lhs_adj[order(annotation_combined_lhs_adj$LHS), , drop = FALSE]
+matrix_combined_lhs_pairs <- expression_combined_lhs_pairs[, order(annotation_combined_lhs_pairs$LHS)]
+annotation_combined_lhs_pairs <- annotation_combined_lhs_pairs[order(annotation_combined_lhs_pairs$LHS), , drop = FALSE]
 
-heatmap_combined_tp_adj <- pheatmap(matrix_combined_tp_adj,
+heatmap_combined_tp_pairs <- pheatmap(matrix_combined_tp_pairs,
                        scale = "row",  # normalize rows (genes)
                        color = colorRampPalette(c("#9D00FF", "white", "#FFA500"))(100),
                        annotation_colors = ann_colors,
-                       annotation_col = annotation_combined_tp_adj,
+                       annotation_col = annotation_combined_tp_pairs,
                        cluster_rows = TRUE,
                        treeheight_row = 0,
                        cluster_cols = FALSE,
-                       gaps_col = cumsum(table(annotation_combined_tp_adj$TP)),
+                       gaps_col = cumsum(table(annotation_combined_tp_pairs$TP)),
                        show_rownames = F,
                        show_colnames = FALSE,
                        annotation_legend = FALSE,
@@ -516,17 +600,17 @@ heatmap_combined_tp_adj <- pheatmap(matrix_combined_tp_adj,
                        fontsize_row = 6,
                        main = NA)
 
-ggsave(here::here("Plots","heatmap_combined_tp_adj.png"), plot = heatmap_combined_tp_adj, width = 3.5, height = 5, dpi = 600)
+ggsave(here::here("Plots","heatmap_combined_tp_pairs.png"), plot = heatmap_combined_tp_pairs, width = 3.5, height = 5, dpi = 600)
 
-heatmap_combined_lhs_adj <- pheatmap(matrix_combined_lhs_adj,
+heatmap_combined_lhs_pairs <- pheatmap(matrix_combined_lhs_pairs,
                        scale = "row",  # normalize rows (genes)
                        color = colorRampPalette(c("#9D00FF", "white", "#FFA500"))(100),
                        annotation_colors = ann_colors,
-                       annotation_col = annotation_combined_lhs_adj,
+                       annotation_col = annotation_combined_lhs_pairs,
                        cluster_rows = TRUE,
                        treeheight_row = 0,
                        cluster_cols = FALSE,
-                       gaps_col = cumsum(table(annotation_combined_lhs_adj$LHS)),
+                       gaps_col = cumsum(table(annotation_combined_lhs_pairs$LHS)),
                        show_rownames = F,
                        show_colnames = F,
                        annotation_legend = FALSE,
@@ -537,7 +621,7 @@ heatmap_combined_lhs_adj <- pheatmap(matrix_combined_lhs_adj,
                        main = NA)
 
 
-ggsave(here::here("Plots","heatmap_combined_lhs_adj.png"), plot = heatmap_combined_lhs_adj, width = 3.5, height = 6, dpi = 600)
+ggsave(here::here("Plots","heatmap_combined_lhs_pairs.png"), plot = heatmap_combined_lhs_pairs, width = 3.5, height = 6, dpi = 600)
 ```
 
 #GOterms using clusterProfiler
@@ -580,13 +664,13 @@ for (file in file_paths) {
   assign(name, df, envir = .GlobalEnv)
 }
 
-Background_tp_combined <- read.csv("GenesGO/Allgenes_end_vs_start.csv") %>%
+Background_tp_pairs <- read.csv("GenesGO/Allgenes_end_vs_start_pairs.csv") %>%
   mutate(X = toupper(X))
-colnames(Background_tp_combined)[1] <- "GeneSymbol"
+colnames(Background_tp_pairs)[1] <- "GeneSymbol"
 
-Background_lhs_combined <- read.csv("GenesGO/Allgenes_adult_vs_pup.csv") %>%
+Background_lhs_pairs <- read.csv("GenesGO/Allgenes_adult_vs_pup_pairs.csv") %>%
   mutate(X = toupper(X))
-colnames(Background_lhs_combined)[1] <- "GeneSymbol"
+colnames(Background_lhs_pairs)[1] <- "GeneSymbol"
 
 rm(df, file, file_paths, name)
 ```
@@ -598,9 +682,9 @@ rm(df, file, file_paths, name)
 #| echo: FALSE
 #Go enrichment analysis for up and down regulated genes
 #Time point
-GO_end_vs_start_DOWN <- enrichGO(Downregulated_end_vs_start$GeneSymbol,
+GO_end_vs_start_DOWN <- enrichGO(Downregulated_end_vs_start_pairs$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
-                       universe = Background_tp_combined$GeneSymbol,  
+                       universe = Background_tp_pairs$GeneSymbol,  
                        keyType = "SYMBOL",
                        ont = "BP",
                        pvalueCutoff = 0.05,
@@ -608,9 +692,9 @@ GO_end_vs_start_DOWN <- enrichGO(Downregulated_end_vs_start$GeneSymbol,
 GO_end_vs_start_DOWN <- GO_end_vs_start_DOWN %>%
   mutate(Regulation = "Downregulated") 
 
-GO_end_vs_start_UP <- enrichGO(Upregulated_end_vs_start$GeneSymbol,
+GO_end_vs_start_UP <- enrichGO(Upregulated_end_vs_start_pairs$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
-                       universe = Background_tp_combined$GeneSymbol,
+                       universe = Background_tp_pairs$GeneSymbol,
                        keyType = "SYMBOL",
                        ont = "BP",
                        pvalueCutoff = 0.05,
@@ -620,9 +704,9 @@ GO_end_vs_start_UP <- GO_end_vs_start_UP %>%
 
 #Life history stage
 #Downregulated_lhs <- Downregulated_lhs[,-1]  #If the code doesn't run as it's supposed to
-GO_adult_vs_pup_DOWN <- enrichGO(Downregulated_adult_vs_pup$GeneSymbol,
+GO_adult_vs_pup_DOWN <- enrichGO(Downregulated_adult_vs_pup_pairs$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
-                       universe = Background_lhs_combined$GeneSymbol,
+                       universe = Background_lhs_pairs$GeneSymbol,
                        keyType = "SYMBOL",
                        ont = "BP",
                        pvalueCutoff = 0.05,
@@ -630,9 +714,9 @@ GO_adult_vs_pup_DOWN <- enrichGO(Downregulated_adult_vs_pup$GeneSymbol,
 GO_adult_vs_pup_DOWN <- GO_adult_vs_pup_DOWN %>%
   mutate(Regulation = "Downregulated") 
 
-GO_adult_vs_pup_UP <- enrichGO(Upregulated_adult_vs_pup$GeneSymbol,
+GO_adult_vs_pup_UP <- enrichGO(Upregulated_adult_vs_pup_pairs$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
-                       universe = Background_lhs_combined$GeneSymbol,
+                       universe = Background_lhs_pairs$GeneSymbol,
                        keyType = "SYMBOL",
                        ont = "BP",
                        pvalueCutoff = 0.05,
@@ -649,17 +733,13 @@ GO_adult_vs_pup_UP <- GO_adult_vs_pup_UP %>%
 #| label: Top20_TP
 #| echo: FALSE
 #Combine
-GO_end_vs_start_combined <- rbind(as.data.frame(GO_end_vs_start_DOWN), as.data.frame(GO_end_vs_start_UP)) %>%
+GO_end_vs_start_pairs <- rbind(as.data.frame(GO_end_vs_start_DOWN), as.data.frame(GO_end_vs_start_UP)) %>%
   arrange(p.adjust) 
 
-write.csv(GO_end_vs_start_combined, here::here("GenesGO", "GO_end_vs_start_combined.csv"), row.names = F)
-#Identify top20
-GO_end_vs_start_Top20 <- GO_end_vs_start_combined %>%
-  arrange(p.adjust) %>%
-  slice_head(n = 20) 
+write.csv(GO_end_vs_start_pairs, here::here("GenesGO", "GO_end_vs_start_pairs.csv"), row.names = F)
 
 #Fancy smancy bubble plot
-plot_end_vs_start <- ggplot(GO_end_vs_start_combined, aes(x = zScore, y = -log10(p.adjust))) +
+plot_end_vs_start_pairs <- ggplot(GO_end_vs_start_pairs, aes(x = zScore, y = -log10(p.adjust))) +
   geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.5) +
 
   scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  
@@ -667,12 +747,10 @@ plot_end_vs_start <- ggplot(GO_end_vs_start_combined, aes(x = zScore, y = -log10
   scale_size_continuous(name = "DEG Count") +
   #Add the top terms to the plot
   geom_text_repel(
-  data = GO_end_vs_start_Top20,  
+  data = GO_end_vs_start_pairs,  
   aes(label = ID),
-  nudge_y = 0.03,         #moves label up
   size = 2.5,
   segment.color = NA,
-  force = 2, 
   max.overlaps = Inf
 ) +
   labs(
@@ -693,35 +771,12 @@ plot_end_vs_start <- ggplot(GO_end_vs_start_combined, aes(x = zScore, y = -log10
   fill = "none" 
 )
 
-#Top 20 GO terms and description
-GO_end_vs_start_Top20_table <- GO_end_vs_start_Top20[, c("ID", "Description")]
-colnames(GO_end_vs_start_Top20_table) <- c("GO Term", "Description")
-rownames(GO_end_vs_start_Top20_table) <- NULL
+#Top GO terms and description
+GO_end_vs_start_pairs_table <- GO_end_vs_start_pairs[, c("ID", "Description")]
+colnames(GO_end_vs_start_pairs_table) <- c("GO Term", "Description")
+rownames(GO_end_vs_start_pairs_table) <- NULL
 
-#Force line break
-GO_end_vs_start_Top20_table$Description <- str_wrap(GO_end_vs_start_Top20_table$Description, width = 50)
-
-# Create alternating row colors
-row_colors <- rep(c("white", "#f0f0f0"), length.out = nrow(GO_TP_Top20_table))
-
-#Table
-p_table_end_vs_start <- ggtexttable(
-  GO_end_vs_start_Top20_table,
-  rows = NULL,
-  theme = ttheme(
-    "light",
-    tbody = list(bg_params = list(fill = row_colors))))
-
-EA_end_vs_start <- plot_grid(
- plot_end_vs_start + fig_theme + theme(legend.position = "none"),
- NULL,
- p_table_end_vs_start,
- ncol = 3,
- rel_widths = c(1.1, 0.1, 0.90))
-
-#ggsave(here::here("Plots","EA_end_vs_start.png"), plot = EA_end_vs_start, width = 7, height = 5, dpi = 600)
-
-ggsave(here::here("Plots","Bubble_end_vs_start.png"), plot = plot_end_vs_start + fig_theme + theme(legend.position = "none"), width = 4, height = 4, dpi = 600)
+ggsave(here::here("Plots","Bubble_end_vs_start_pairs.png"), plot = plot_end_vs_start_pairs + fig_theme, width = 6, height = 4, dpi = 600)
 ```
 
 ### Life history stage
@@ -730,17 +785,13 @@ ggsave(here::here("Plots","Bubble_end_vs_start.png"), plot = plot_end_vs_start +
 #| label: Top20_LHS
 #| echo: FALSE
 #Combine
-GO_adult_vs_pup_combined <- rbind(as.data.frame(GO_adult_vs_pup_DOWN), as.data.frame(GO_adult_vs_pup_UP)) %>%
+GO_adult_vs_pup_pairs <- rbind(as.data.frame(GO_adult_vs_pup_DOWN), as.data.frame(GO_adult_vs_pup_UP)) %>%
   arrange(p.adjust) 
 
-write.csv(GO_adult_vs_pup_combined, here::here("GenesGO", "GO_adult_vs_pup_combined.csv"), row.names = F)
-#Identify top20
-GO_adult_vs_pup_Top20 <- GO_adult_vs_pup_combined %>%
-  arrange(p.adjust) %>%
-  slice_head(n = 20) 
+write.csv(GO_adult_vs_pup_pairs, here::here("GenesGO", "GO_adult_vs_pup_pairs.csv"), row.names = F)
 
 #Fancy smancy bubble plot
-plot_adult_vs_pup <- ggplot(GO_adult_vs_pup_combined, aes(x = zScore, y = -log10(p.adjust))) +
+plot_adult_vs_pup_pairs <- ggplot(GO_adult_vs_pup_pairs, aes(x = zScore, y = -log10(p.adjust))) +
   geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.5) +
 
   scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  
@@ -748,7 +799,7 @@ plot_adult_vs_pup <- ggplot(GO_adult_vs_pup_combined, aes(x = zScore, y = -log10
   scale_size_continuous(name = "DEG Count") +
   #Add the top terms to the plot
   geom_text_repel(
-  data = GO_adult_vs_pup_Top20,  
+  data = GO_adult_vs_pup_pairs,  
   aes(label = ID),
   nudge_y = 0.03,         #moves label up
   size = 2.5,
@@ -775,369 +826,9 @@ plot_adult_vs_pup <- ggplot(GO_adult_vs_pup_combined, aes(x = zScore, y = -log10
 )
 
 #Top 20 GO terms and description
-GO_adult_vs_pup_Top20_table <- GO_adult_vs_pup_Top20[, c("ID", "Description")]
-colnames(GO_adult_vs_pup_Top20_table) <- c("GO Term", "Description")
-rownames(GO_adult_vs_pup_Top20_table) <- NULL
+GO_adult_vs_pup_pairs_table <- GO_adult_vs_pup_pairs[, c("ID", "Description")]
+colnames(GO_adult_vs_pup_pairs_table) <- c("GO Term", "Description")
+rownames(GO_adult_vs_pup_pairs_table) <- NULL
 
-#Force line break
-GO_adult_vs_pup_Top20_table$Description <- str_wrap(GO_adult_vs_pup_Top20_table$Description, width = 50)
-
-# Create alternating row colors
-row_colors <- rep(c("white", "#f0f0f0"), length.out = nrow(GO_TP_Top20_table))
-
-#Table
-p_table_adult_vs_pup <- ggtexttable(
-  GO_adult_vs_pup_Top20_table,
-  rows = NULL,
-  theme = ttheme(
-    "light",
-    tbody = list(bg_params = list(fill = row_colors))))
-
-EA_adult_vs_pup <- plot_grid(
- plot_adult_vs_pup + fig_theme + theme(legend.position = "none"),
- NULL,
- p_table_adult_vs_pup,
- ncol = 3,
- rel_widths = c(1.1, 0.1, 0.90))
-
-#ggsave(here::here("Plots","EA_adult_vs_pup.png"), plot = EA_adult_vs_pup, width = 7, height = 5, dpi = 600)
-
-ggsave(here::here("Plots","Bubble_adult_vs_pup.png"), plot = plot_adult_vs_pup + fig_theme + theme(legend.position = "none"), width = 4, height = 4, dpi = 600)
-```
-
-## Revigo in R
-
-REduce and VIsualise Gene Ontology - a tool to reduce redundant GO terms and group the terms based on semantic similarity.
-
-```{r}
-#| label: load_revigo_combined
-#| echo: FALSE
-remotes::install_github("ssayols/rrvgo")
-library(rrvgo)
-```
-
-### Similarity matrices
-
-```{r}
-#| label: Similarity_matrices_combined
-#| echo: FALSE
-#calculate similarity matrices for all contrasts
-SM_GO_TP_DOWN <- calculateSimMatrix(GO_end_vs_start_DOWN$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
-SM_GO_TP_UP <- calculateSimMatrix(GO_end_vs_start_UP$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
-SM_GO_LHS_DOWN <- calculateSimMatrix(GO_adult_vs_pup_DOWN$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
-SM_GO_LHS_UP <- calculateSimMatrix(GO_adult_vs_pup_UP$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
-```
-
-### Reduce terms
-
-```{r}
-#| label: Reduce_terms
-#| echo: FALSE
-## Time point
-# Compute scores end_vs_start_DOwn
-scores_end_vs_start_DOWN <- -log10(as.numeric(GO_end_vs_start_DOWN$p.adjust))
-names(scores_end_vs_start_DOWN) <- GO_end_vs_start_DOWN$ID
-
-#Reduce terms
-reduced_end_vs_start_DOWN <- reduceSimMatrix(
-    simMatrix = SM_GO_end_vs_start_DOWN,
-    scores = scores_end_vs_start_DOWN,
-    threshold = 0.7,
-    orgdb = "org.Hs.eg.db")
-
-# Compute scores end_vs_start_UP
-scores_end_vs_start_UP <- -log10(as.numeric(GO_end_vs_start_UP$p.adjust))
-names(scores_end_vs_start_UP) <- GO_end_vs_start_UP$ID
-
-#Reduce terms
-reduced_end_vs_start_UP <- reduceSimMatrix(
-    simMatrix = SM_GO_end_vs_start_UP,
-    scores = scores_end_vs_start_UP,
-    threshold = 0.7,
-    orgdb = "org.Hs.eg.db")
-
-## Life hisotry stage
-# Compute scores adult_vs_pup_UP
-scores_adult_vs_pup_UP <- -log10(as.numeric(GO_adult_vs_pup_UP$p.adjust))
-names(scores_adult_vs_pup_UP) <- GO_adult_vs_pup_UP$ID
-
-#Reduce terms
-reduced_adult_vs_pup_UP <- reduceSimMatrix(
-    simMatrix = SM_GO_adult_vs_pup_UP,
-    scores = scores_adult_vs_pup_UP,
-    threshold = 0.7,
-    orgdb = "org.Hs.eg.db")
-
-# Compute scores adult_vs_pup_DOWN
-scores_adult_vs_pup_DOWN <- -log10(as.numeric(GO_adult_vs_pup_DOWN$p.adjust))
-names(scores_adult_vs_pup_DOWN) <- GO_adult_vs_pup_DOWN$ID
-
-#Reduce terms
-reduced_adult_vs_pup_DOWN <- reduceSimMatrix(
-    simMatrix = SM_GO_adult_vs_pup_DOWN,
-    scores = scores_adult_vs_pup_DOWN,
-    threshold = 0.7,
-    orgdb = "org.Hs.eg.db")
-```
-
-## Scatterplots
-
-```{r}
-#| label: scatterplot_manual
-#| echo: FALSE
-parent_colors <- c(
-  "#FDA172",  # orange
-  "#9867B5",  # purple
-  "#8B9E58",  # olive green
-  "#638B9B",  # teal
-  "#C44B4E",  # deep red
-  "#C46A00",  # rusty orange
-  "#B58E36",  # golden brown
-  "#6C75A9"   # muted blue-grey
-)
-
-# Function to generate semantic similarity scatter plot
-plot_semantic_similarity <- function(simMatrix, reducedTerms, title_text, 
-                                     parent_colors, xlim_val = c(-1, 1), ylim_val = c(-1, 1),
-                                     point_alpha = 0.5, point_range = c(0, 20), label_size = 2.45,
-                                     top_n = NULL, min_score = NULL, box_padding = 0.09) {
-  
-  # 1. Distance matrix
-  dist_mat <- as.dist(1 - simMatrix)
-  
-  # 2. MDS
-  mds <- cmdscale(dist_mat, eig = TRUE, k = 2)
-  
-  # 3. Build dataframe with metadata
-  df <- as.data.frame(mds$points)
-  df$go <- rownames(df)
-  df <- merge(df, reducedTerms[, c("go", "term", "parent", "parentTerm", "score")],
-              by = "go", all.x = TRUE)
-  
-  # 4.select top 5 most important parent terms
-top_per_parent <- df %>%
-  group_by(parent) %>%
-  slice_max(score, n = 1, with_ties = FALSE) %>%
-  ungroup()
-
-top_parents <- top_per_parent %>%
-  arrange(desc(score)) %>%
-  slice(1:5) %>%   # top 5 parents
-  pull(parent) 
-
-label_data <- df %>%
-  filter(parent %in% top_parents) %>%
-  group_by(parentTerm) %>%
-  summarise(
-    V1 = mean(V1),
-    V2 = mean(V2),
-    score = max(score)
-  ) %>%
-  ungroup()
-  
-  # 5. Filter top N or by minimum score if requested
-  if(!is.null(top_n)) {
-    label_data <- label_data %>% arrange(desc(score)) %>% slice(1:top_n)
-  }
-  if(!is.null(min_score)) {
-    label_data <- label_data %>% filter(score >= min_score)
-  }
-  
-  # 6. Plot
-  p <- ggplot(df, aes(x = V1, y = V2, color = parentTerm)) +
-    geom_point(aes(size = score), alpha = point_alpha) +
-    scale_color_manual(values = parent_colors, guide = "none") +
-    scale_size_continuous(range = point_range, guide = "none") +
-    theme_classic() +
-    xlim(xlim_val) +
-    ylim(ylim_val) +
-    xlab("Semantic space x") +
-    ylab("Semantic space y") +
-    ggtitle(title_text) +
-    geom_label_repel(aes(label = parentTerm),
-                     data = label_data,
-                     force = 1,
-                     box.padding = unit(box_padding, "lines"),
-                     point.padding = unit(0.2, "lines"),
-                     size = label_size,
-                     max.overlaps = Inf)
-  
-  return(p)
-}
-
-#Make scatterplots
-
-SP_GO_end_vs_start_UP   <- plot_semantic_similarity(SM_GO_end_vs_start_UP, reduced_end_vs_start_UP, 
-                                          "(d) Upregulated on day 60", parent_colors)
-SP_GO_end_vs_start_DOWN <- plot_semantic_similarity(SM_GO_end_vs_start_DOWN, reduced_end_vs_start_DOWN, 
-                                          "(c) Downregulated on day 60", parent_colors)
-SP_GO_adult_vs_pup_UP  <- plot_semantic_similarity(SM_GO_adult_vs_pup_UP, reduced_adult_vs_pup_UP, 
-                                          "(a) Upregulated in mothers", parent_colors)
-
-parent_colors <- c(
- "#FDA172", "#9867B5", "#8B9E58", "#4C6A92",
- "#C44B4E", "#C46A00", "#B58E36", "#6C75A9",
- "#A67C52", "#7A5E7E", "#5C8C6B", "#7289B0",
- "#D98C6D", "#8B6D92", "#B5A04C", "#587085",
- "#C4889F", "#74935E", "#9A7C5D", "#66778B", "#A37B9A")
-
-SP_GO_adult_vs_pup_DOWN <- plot_semantic_similarity(SM_GO_adult_vs_pup_DOWN, reduced_adult_vs_pup_DOWN, 
-                                        "(b) Upregulated in pups", parent_colors, box_padding = 0.42)
-
-  
-SP_adult_vs_pup_GO <- plot_grid(SP_GO_adult_vs_pup_UP + 
-                        theme(axis.title.x = element_blank()) + fig_theme, 
-                      SP_GO_adult_vs_pup_DOWN + fig_theme + theme(axis.title = element_blank()), rel_widths = c(1.05, 1))
-SP_end_vs_start_GO <- plot_grid(SP_GO_end_vs_start_DOWN + fig_theme, 
-                       SP_GO_end_vs_start_UP + fig_theme + coord_cartesian(clip = "off") + theme(axis.title.y = element_blank(),
-  plot.margin = margin(5, 10, 5, 5)), ncol = 2, rel_widths = c(1.05, 1))  
-  
-combined_SP <- plot_grid(SP_adult_vs_pup_GO, SP_end_vs_start_GO, ncol = 1)
-ggsave(here::here("Plots","combined_SP.png"), plot = combined_SP, width = 7, height = 7, dpi = 600)
-```
-
-![Semantic similarity of GOterms (Life history stage)](Plots/combined_SP.png) \#### Adjusted
-
-```{r}
-#| label: scatterplot_manual
-#| echo: FALSE
-parent_colors <- c(
-  "#FDA172",  # orange
-  "#9867B5",  # purple
-  "#8B9E58",  # olive green
-  "#638B9B",  # teal
-  "#C44B4E",  # deep red
-  "#C46A00",  # rusty orange
-  "#B58E36",  # golden brown
-  "#6C75A9"   # muted blue-grey
-)
-
-# Function to generate semantic similarity scatter plot
-plot_semantic_similarity <- function(simMatrix, reducedTerms, title_text, 
-                                     parent_colors, xlim_val = c(-1, 1), ylim_val = c(-1, 1),
-                                     point_alpha = 0.5, point_range = c(0, 20), label_size = 2.5,
-                                     top_n = NULL, min_score = NULL, box_padding = 0.05) {
-  
-  # 1. Distance matrix
-  dist_mat <- as.dist(1 - simMatrix)
-  
-  # 2. MDS
-  mds <- cmdscale(dist_mat, eig = TRUE, k = 2)
-  
-  # 3. Build dataframe with metadata
-  df <- as.data.frame(mds$points)
-  df$go <- rownames(df)
-  df <- merge(df, reducedTerms[, c("go", "term", "parent", "parentTerm", "score")],
-              by = "go", all.x = TRUE)
-  
-  # 4.select top 5 most important parent terms
-top_per_parent <- df %>%
-  group_by(parent) %>%
-  slice_max(score, n = 1, with_ties = FALSE) %>%
-  ungroup()
-
-top_parents <- top_per_parent %>%
-  arrange(desc(score)) %>%
-  slice(1:5) %>%   # top 5 parents
-  pull(parent) 
-
-label_data <- df %>%
-  filter(parent %in% top_parents) %>%
-  group_by(parentTerm) %>%
-  summarise(
-    V1 = mean(V1),
-    V2 = mean(V2),
-    score = max(score)
-  ) %>%
-  ungroup()
-  
-  # 5. Filter top N or by minimum score if requested
-  if(!is.null(top_n)) {
-    label_data <- label_data %>% arrange(desc(score)) %>% slice(1:top_n)
-  }
-  if(!is.null(min_score)) {
-    label_data <- label_data %>% filter(score >= min_score)
-  }
-  
-  # 6. Plot
-  p <- ggplot(df, aes(x = V1, y = V2, color = parentTerm)) +
-    geom_point(aes(size = score), alpha = point_alpha) +
-    scale_color_manual(values = parent_colors, guide = "none") +
-    scale_size_continuous(range = point_range, guide = "none") +
-    theme_classic() +
-    xlim(xlim_val) +
-    ylim(ylim_val) +
-    xlab("Semantic space x") +
-    ylab("Semantic space y") +
-    ggtitle(title_text) +
-    geom_label_repel(aes(label = parentTerm),
-                     data = label_data,
-                     force = 1,
-                     box.padding = unit(box_padding, "lines"),
-                     point.padding = unit(0.3, "lines"),
-                     size = label_size,
-                     max.overlaps = Inf)
-  
-  return(p)
-}
-
-# -------------------------------
-# Example usage for your four datasets
-
-SP_GO_end_vs_start_UP_adj   <- plot_semantic_similarity(SM_GO_end_vs_start_UP_adj, reduced_end_vs_start_UP_adj, 
-                                          "(d) Upregulated on day 60", parent_colors)
-SP_GO_end_vs_start_DOWN_adj <- plot_semantic_similarity(SM_GO_end_vs_start_DOWN_adj, reduced_end_vs_start_DOWN_adj, 
-                                          "(c) Downregulated on day 60", parent_colors)
-
-scores_adult_vs_pup_UP <- -log10(as.numeric(GO_adult_vs_pup_UP$p.adjust))
-names(scores_adult_vs_pup_UP) <- GO_adult_vs_pup_UP$ID
-SS_adult_vs_pup_adj <- as.data.frame(cbind(GO_adult_vs_pup_UP$ID, -log10(as.numeric(GO_adult_vs_pup_UP$p.adjust)), GO_adult_vs_pup_UP$Description, 0, 0))
-colnames(SS_adult_vs_pup_adj) <- c("ID", "score", "Description", "V1", "V2")
-SS_adult_vs_pup_adj$V1 <- as.numeric(SS_adult_vs_pup_adj$V1)
-SS_adult_vs_pup_adj$V2 <- as.numeric(SS_adult_vs_pup_adj$V2)
-SS_adult_vs_pup_adj$score <- as.numeric(SS_adult_vs_pup_adj$score)
-
-xlim_val = c(-1, 1)
-ylim_val = c(-1, 1)
-SP_GO_adult_vs_pup_UP_adj <- ggplot(SS_adult_vs_pup_adj, aes(x = V1, y = V2, color = Description)) +
-    geom_point(aes(size = score), alpha = 0.5) +
-    scale_color_manual(values = parent_colors, guide = "none") +
-    scale_size_continuous(range = c(0, 20), guide = "none") +
-    theme_classic() +
-    xlim(xlim_val) +
-    ylim(ylim_val) +
-    xlab("Semantic space x") +
-    ylab("Semantic space y") +
-    ggtitle("(a) Upregulated in mothers") +
-    geom_label_repel(aes(label = Description),
-                     data = SS_adult_vs_pup_adj,
-                     force = 1,
-                     box.padding = unit(0.09, "lines"),
-                     point.padding = unit(0.2, "lines"),
-                     size = 2.5,
-                     max.overlaps = Inf)
-
-
-
-
-parent_colors <- c(
- "#FDA172", "#9867B5", "#8B9E58", "#4C6A92",
- "#C44B4E", "#C46A00", "#B58E36", "#6C75A9",
- "#A67C52", "#7A5E7E", "#5C8C6B", "#7289B0",
- "#D98C6D", "#8B6D92", "#B5A04C", "#587085",
- "#C4889F", "#74935E", "#9A7C5D", "#66778B", "#A37B9A")
-
-SP_GO_adult_vs_pup_DOWN_adj <- plot_semantic_similarity(SM_GO_adult_vs_pup_DOWN_adj, reduced_adult_vs_pup_DOWN_adj, 
-                                        "(b) Upregulated in pups", parent_colors, box_padding = 0.27, label_size = 2.43)
-
-  
-SP_adult_vs_pup_GO_adj <- plot_grid(SP_GO_adult_vs_pup_UP_adj + 
-                        theme(axis.title.x = element_blank()) + fig_theme,  
-                      SP_GO_adult_vs_pup_DOWN_adj + fig_theme + theme(axis.title = element_blank()), rel_widths = c(1.05, 1))
-SP_end_vs_start_GO_adj <- plot_grid(SP_GO_end_vs_start_DOWN_adj + fig_theme, 
-                       SP_GO_end_vs_start_UP_adj + fig_theme + coord_cartesian(clip = "off") + theme(axis.title.y = element_blank(),
-  plot.margin = margin(5, 10, 5, 5)), ncol = 2, rel_widths = c(1.05, 1))  
-  
-combined_SP_adj <- plot_grid(SP_adult_vs_pup_GO_adj, SP_end_vs_start_GO_adj, ncol = 1)
-ggsave(here::here("Plots","combined_SP_adj.png"), plot = combined_SP_adj, width = 7, height = 7, dpi = 600)
+ggsave(here::here("Plots","Bubble_adult_vs_pup_pairs.png"), plot = plot_adult_vs_pup_pairs + fig_theme,  width = 6, height = 4, dpi = 600)
 ```
