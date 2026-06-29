@@ -1,0 +1,112 @@
+---
+title: "Supplementary analyses"
+subtitle: "Script"
+author: "Ane Liv Berthelsen"
+
+format:
+  #html: 
+  pdf: 
+    papersize: "a4paper"
+    toc: true
+    toc-depth: 3
+    toc-title: "Contents"
+    number-sections: FALSE
+    documentclass: article
+    geometry:
+      - inner=3cm
+      - outer=3cm
+      - top=2cm
+      - bottom=3cm
+      - headsep=22pt
+      - headheight=11pt
+      - footskip=33pt
+      - ignorehead
+      - ignorefoot
+      - heightrounded
+    fig-pos: 'h'
+    fig-cap-location: bottom
+    tbl-cap-location: top
+editor: visual
+date: 11/20/2023
+mainfont: Times New Roman
+---
+
+```{r}
+#install.packages("here")
+#install.packages("pacman")
+library(here)
+here::here()
+```
+
+```{r}
+#| label: packages
+#| echo: FALSE
+#here::here()
+invisible(pacman::p_load(dplyr, readxl, tidyverse, cowplot, edgeR, DESeq2, RColorBrewer, ggplot2, reshape2, ggpubr, extrafont, pheatmap))
+
+#font_import()
+#fonts()
+#cowplot for toggling with plots
+#edgeR  loads limma as a dependency, limma for analysing microassay and RNA seq data
+#DESeq2 needed for rowCounts
+#reshape2 needed for the first plot
+#ggpubr need to bind plots together
+#extrafont for arial font
+#pheatmap needed for heatmaps
+```
+
+# Data
+
+```{r}
+#| label: load_data
+#| echo: FALSE
+#Load in the filtered data
+#Mutate all needed predictors into factors
+d_n<-readRDS("rnaseq_filtered_Liv.Rdata")  
+#dim(d_n) 12639 rows
+
+#Sequencing depth
+sequences <- read.delim("multiqc_fastqc.txt", header = TRUE, sep = "\t")
+sum(sequences$Total.Sequences)
+summary(sequences$Total.Sequences)
+
+## White blood counts
+WBC <- read_excel("WBCcounts_GEP.xlsx")
+
+##Combined
+d_n$samples <- left_join(d_n$samples, WBC, by = "Sample")
+head(d_n$samples)
+d_n$samples$Diff_Neutro <- as.numeric(d_n$samples$Diff_Neutro)
+d_n$samples$Diff_Eo <- as.numeric(d_n$samples$Diff_Eo)
+d_n$samples$Diff_Baso <- as.numeric(d_n$samples$Diff_Baso)
+d_n$samples$Diff_Mono <- as.numeric(d_n$samples$Diff_Mono)
+d_n$samples$Diff_Lympho <- as.numeric(d_n$samples$Diff_Lympho)
+rm(WBC)
+
+d_n$samples$WBC_ratio <- ((d_n$samples$Diff_Neutro + d_n$samples$Diff_Eo + d_n$samples$Diff_Baso + d_n$samples$Diff_Mono)/d_n$samples$Diff_Lympho)
+d_n$samples$WBC_ratio_log <- log(d_n$samples$WBC_ratio)
+
+#Remove incomplete 
+complete <- complete.cases(d_n$samples[, "WBC_ratio_log"])
+d_n_WBC <- d_n[, complete]
+rm(complete)
+
+d_n_WBC$samples$life_history_stage <- as.factor(d_n_WBC$samples$life_history_stage)
+d_n_WBC$samples$colony <- as.factor(d_n_WBC$samples$colony)
+d_n_WBC$samples$ID <- as.factor(d_n_WBC$samples$ID)
+d_n_WBC$samples$year <- as.factor(d_n_WBC$samples$year)
+d_n_WBC$samples$group <- as.factor(d_n_WBC$samples$group)
+d_n_WBC$samples$pair <- as.factor(d_n_WBC$samples$pair)
+rm(d_n)
+dim(d_n_WBC)
+table(d_n_WBC$samples$pair)
+
+#PC scores from genomic matrix
+Genomic_PCS <- read_csv("GenomicPC_scores_GEP.csv")
+Genomic_PCS <- subset(Genomic_PCS, select = c(PC1, PC2, PC3, PC4, PC5, ID.y, Sample))
+colnames(Genomic_PCS) <- "ID"
+Genomic_PCS$ID <- as.factor(Genomic_PCS$ID)
+#Combine
+d_n_all <- d_n_WBC
+d_n_all$samples <- left_join(d_n_all$samples, Genomic_PCS, by = c("Sample", "ID"))
+```
