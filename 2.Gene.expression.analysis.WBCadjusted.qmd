@@ -287,8 +287,6 @@ boxplot(bd_colony, main = "Dispersion by colony")
 boxplot(bd_year, main = "Dispersion by year")
 boxplot(bd_lhs, main = "Dispersion by life-history stage")
 boxplot(bd_tp, main = "Dispersion by developmental time point")
-
-
 ```
 
 ```{r}

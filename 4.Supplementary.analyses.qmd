@@ -42,7 +42,7 @@ here::here()
 #| label: packages
 #| echo: FALSE
 #here::here()
-invisible(pacman::p_load(dplyr, readxl, tidyverse, cowplot, edgeR, DESeq2, RColorBrewer, ggplot2, reshape2, ggpubr, extrafont, pheatmap))
+invisible(pacman::p_load(dplyr, readxl, tidyverse, cowplot, edgeR, DESeq2, RColorBrewer, ggplot2, reshape2, ggpubr, extrafont, pheatmap, vegan, car))
 
 #font_import()
 #fonts()
@@ -53,22 +53,229 @@ invisible(pacman::p_load(dplyr, readxl, tidyverse, cowplot, edgeR, DESeq2, RColo
 #ggpubr need to bind plots together
 #extrafont for arial font
 #pheatmap needed for heatmaps
+#vegan for PERMANOVA
+#car for multicollinearity 
 ```
 
-# Data
+# Data for pups
 
 ```{r}
 #| label: load_data
 #| echo: FALSE
 #Load in the filtered data
 #Mutate all needed predictors into factors
-d_n<-readRDS("rnaseq_filtered_Liv.Rdata")  
-#dim(d_n) 12639 rows
+d_n_pups <- readRDS("rnaseq_filtered_sex_Liv_pups.Rdata")  
+#dim(d_n_pups) 12166 rows 91 individuals
 
-#Sequencing depth
-sequences <- read.delim("multiqc_fastqc.txt", header = TRUE, sep = "\t")
-sum(sequences$Total.Sequences)
-summary(sequences$Total.Sequences)
+#note T21 is a female
+d_n_pups$samples$sex[d_n_pups$samples$ID == "T21"] <- "F"
+
+## White blood counts
+WBC <- read_excel("WBCcounts_GEP.xlsx")
+
+##Combined
+d_n_pups$samples <- left_join(d_n_pups$samples, WBC, by = "Sample")
+head(d_n_pups$samples)
+d_n_pups$samples$Diff_Neutro <- as.numeric(d_n_pups$samples$Diff_Neutro)
+d_n_pups$samples$Diff_Eo <- as.numeric(d_n_pups$samples$Diff_Eo)
+d_n_pups$samples$Diff_Baso <- as.numeric(d_n_pups$samples$Diff_Baso)
+d_n_pups$samples$Diff_Mono <- as.numeric(d_n_pups$samples$Diff_Mono)
+d_n_pups$samples$Diff_Lympho <- as.numeric(d_n_pups$samples$Diff_Lympho)
+rm(WBC)
+
+d_n_pups$samples$WBC_ratio <- ((d_n_pups$samples$Diff_Neutro + d_n_pups$samples$Diff_Eo + d_n_pups$samples$Diff_Baso + d_n_pups$samples$Diff_Mono)/d_n_pups$samples$Diff_Lympho)
+d_n_pups$samples$WBC_ratio_log <- log(d_n_pups$samples$WBC_ratio)
+
+#Remove incomplete 
+complete <- complete.cases(d_n_pups$samples[, "WBC_ratio_log"])
+d_n_pups_WBC <- d_n_pups[, complete]
+rm(complete)
+
+d_n_pups_WBC$samples$life_history_stage <- as.factor(d_n_pups_WBC$samples$life_history_stage)
+d_n_pups_WBC$samples$colony <- as.factor(d_n_pups_WBC$samples$colony)
+d_n_pups_WBC$samples$ID <- as.factor(d_n_pups_WBC$samples$ID)
+d_n_pups_WBC$samples$year <- as.factor(d_n_pups_WBC$samples$year)
+d_n_pups_WBC$samples$group <- as.factor(d_n_pups_WBC$samples$group)
+d_n_pups_WBC$samples$pair <- as.factor(d_n_pups_WBC$samples$pair)
+d_n_pups_WBC$samples$sex <- as.factor(d_n_pups_WBC$samples$sex)
+rm(d_n_pups)
+dim(d_n_pups_WBC) #12166 genes, 89 samples
+table(d_n_pups_WBC$samples$ID) #individuals with only one sample: C11, C15, C16, C21, H15, H7, N17, N21, N4, T20, T21 (11 individual, 22%)
+#unique(d_n_pups_WBC$samples$ID) 50 individuals
+
+#PC scores from genomic matrix
+Genomic_PCS <- read_csv("GenomicPC_scores_GEP.csv")
+Genomic_PCS_pups <- Genomic_PCS[grepl("pup", Genomic_PCS$Sample), ]
+Genomic_PCS_pups <- subset(Genomic_PCS_pups, select = c(PC1, PC2, PC3, PC4, PC5, ID.y, Sample))
+colnames(Genomic_PCS_pups)[6] <- "ID"
+Genomic_PCS_pups$ID <- as.factor(Genomic_PCS_pups$ID)
+#Combine
+d_n_pups_all <- d_n_pups_WBC
+d_n_pups_all$samples <- left_join(d_n_pups_all$samples, Genomic_PCS_pups, by = c("Sample", "ID"))
+
+dim(d_n_pups_all) #12166 genes, 89 samples
+table(d_n_pups_all$samples$ID) #individuals with only one sample: C11, C15, C16, C21, H15, H7, N17, N21, N4, T20, T21 (11 individual, 22%)
+#unique(d_n_pups_all$samples$ID) 50 individuals
+
+rm(Genomic_PCS, Genomic_PCS_pups)
+```
+
+## Test for sex specific global patterns
+## PCA
+
+Prepare data for PCA
+
+```{r}
+#| label: PCA_data_prep_pups
+#| echo: FALSE
+#| message: false
+#Explicitly set reference levels for the contrasts
+d_n_pups_all$samples$sex <- relevel(d_n_pups_all$samples$sex, ref = "M")
+
+cpm_mat_pups <- cpm(d_n_pups_all, log=TRUE)  #we need the log values
+
+#test for multicollinearity among covariates
+vif(lm(as.numeric(d_n_pups_all$samples$sex) ~ WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5, data = d_n_pups_all$samples)) #all
+#all covariates are below 1.9 confirming none of them to be strongly correlated 
+
+#Following Smyth et al. 2005: https://doi.org/10.1093/bioinformatics/bti270
+#To account for repeated measures, we used removeBatchEffect from limma to correct the expression matrix
+#This effectively removes inter-individual variation
+exprs_corrected_pups <- removeBatchEffect(cpm_mat_pups, batch = d_n_pups_all$samples$id)
+
+#PCA with prcomp()
+pca_pups <- prcomp(t(exprs_corrected_pups), center = TRUE, scale. = TRUE)
+
+#Extract PC1 and PC2 
+pca_var_pups <- pca_pups$sdev^2                  
+pca_var_explained_pups <- pca_var_pups / sum(pca_var_pups)   
+round(pca_var_explained_pups[1:2] * 100, 2)
+
+plot(pca_var_explained_pups, type="b", main="Scree Plot", xlab="Principal component", ylab="Variance Explained") #4 above 5%
+
+pc_scores_pups <- as.data.frame(pca_pups$x[, 1:2])  #keep PC1 and PC2
+pc_scores_pups$Sample <- rownames(pc_scores_pups)
+colnames(pc_scores_pups) <- c("PC1_GE", "PC2_GE", "Sample")
+pc_scores_pups <- left_join(pc_scores_pups, d_n_pups_all$samples, by = "Sample")
+
+write.csv(pc_scores_pups, file = here::here("GenesGO", "pc_scores_pups.csv"))
+```
+
+Create a PCA plot to identify outliers. 
+
+```{r}
+#| label: PCA
+#| echo: FALSE
+#| message: false
+PCA_sex <- ggplot(pc_scores_pups, aes(x = PC1_GE, y = PC2_GE, color = sex, shape = sex)) +
+  geom_point(size = 2) +
+  theme_classic() +
+  stat_ellipse(type = "norm", size = 0.5) +
+  scale_color_manual(values = c("#E69F00", "#56B4E9")) +
+  scale_shape_manual(values = c(16,17)) +
+  xlim(-200, 200) +
+  ylim(-200, 200) +
+  labs(title = "Offspring sex", x = "PC1 (18 %)", y = "PC2 (15 %)", color = NULL, shape = NULL)
+
+ggsave(here::here("Plots","PCA_plots_sex.png"), plot = PCA_sex, dpi = 600)
+rm(PCA_sex)
+```
+
+![Principle component analysis of processed data](Plots/PCA_plots_sex.png)
+## PERMANOVA & betadisper
+```{r}
+#| label: PCA_test_pups
+#| echo: FALSE
+#| message: false
+#Test PCA
+#Create distance matrix from the corrected expression values
+distance_matrix_pups <- dist(t(exprs_corrected_pups), method = "euclidean")
+
+#PERMANOVA simple
+adonis2(distance_matrix_pups ~ sex,
+        data = d_n_pups_all$samples, permutations = 1000, by = "margin") #no effect of sex
+
+#PERMANOVA with contrasts
+adonis2(distance_matrix_pups ~ group + year + colony + sex,
+        data = d_n_pups_all$samples, permutations = 5000, by = "margin") #no effect of sex
+
+#PERMANOVA full
+adonis2(distance_matrix_pups ~ group + year + colony + sex + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
+        data = d_n_pups_all$samples, permutations = 5000, by = "margin") #no effect of sex
+
+#Test for within group variance
+#https://www.rdocumentation.org/packages/vegan/versions/2.7-1/topics/permutest.betadisper
+bd_sex <- betadisper(distance_matrix_pups, d_n_pups_all$samples$sex) 
+anova(bd_sex)
+(mod.HSD <- TukeyHSD(bd_sex))
+plot(mod.HSD)
+permutest(bd_sex, permutations = 1000) #no effect of sex
+
+par(mfrow = c(1, 1))
+boxplot(bd_sex, main = "Dispersion by sex")
+```
+
+# Differential gene expression analysis
+## By offspring sex
+
+```{r}
+#| label: DEG_Combined
+#| echo: FALSE
+
+design_sex <- model.matrix(~ 0 + sex, data = d_n_pups_all$samples) 
+
+colnames(design_sex)
+contr.matrix.sex <- makeContrasts(
+ male_vs_female = sexM-sexF,
+ levels = design_sex) 
+
+vobj_sex <- voom(d_n_pups_all, design_sex, plot=TRUE)
+#Fit a random effect
+dupcor_sex <- duplicateCorrelation(vobj_sex, design_sex, block = d_n_pups_all$samples$ID)
+dupcor_sex$consensus #the estimated intra individual correlation (0.1698555)
+
+#run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
+vobj_sex = voom(d_n_pups_all, design_sex, plot=TRUE,
+            block=d_n_pups_all$samples$ID, correlation=dupcor_sex$consensus)
+#update the correlation for the new voom weights
+dupcor_sex <- duplicateCorrelation(vobj_sex, design_sex, block = d_n_pups_all$samples$ID)
+dupcor_sex$consensus #the estimated intra individual correlation (0.1698835)
+#Fit the model
+vfit_sex <- lmFit(vobj_sex, design_sex, block=d_n_pups_all$samples$ID, correlation=dupcor_sex$consensus)
+vfit_sex <- contrasts.fit(vfit_sex, contrasts=contr.matrix.sex)
+
+# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
+efit_sex <- eBayes(vfit_sex)
+topTable(efit_sex, n=20)
+plotSA(efit_sex, main="Final model: Mean-variance trend")
+plotMD(efit_sex)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit_sex$F
+head(efit_sex$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA)
+head(efit_sex$p.value) #same
+summary(decideTests(efit_sex, adjust.method="fdr"))
+#set log-fold-changes (log-FCs) to be above a minimum value. 
+
+hist(efit_sex$p.value, breaks=50, 
+     main="P-value Distribution", xlab="Raw P-values")
+
+tfit_sex <- treat(vfit_sex, lfc=1) 
+topTreat(tfit_sex)
+nrow(tfit_sex)
+dt_sex <- decideTests(tfit_sex, adjust.method="fdr")
+summary(dt_sex) 
+```
+
+# Interactions
+```{r}
+#| label: load_data
+#| echo: FALSE
+#Load in the filtered data
+#Mutate all needed predictors into factors
+d_n <- readRDS("rnaseq_filtered_Liv.Rdata")  
+#dim(d_n) 12639 rows
 
 ## White blood counts
 WBC <- read_excel("WBCcounts_GEP.xlsx")

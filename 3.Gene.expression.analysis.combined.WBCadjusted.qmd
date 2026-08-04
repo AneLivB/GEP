@@ -1,7 +1,7 @@
 ---
 title: "Gene expression project"
 subtitle: "Analysis script"
-author: "Bernice Sepers & Ane Liv Berthelsen"
+author: "Ane Liv Berthelsen"
 
 format:
   #html: 
@@ -42,7 +42,7 @@ here::here()
 #| label: packages
 #| echo: FALSE
 #here::here()
-invisible(pacman::p_load(dplyr, readxl, tidyverse, cowplot, edgeR, DESeq2, RColorBrewer, ggplot2, reshape2, ggpubr, extrafont, pheatmap))
+invisible(pacman::p_load(dplyr, readxl, tidyverse, cowplot, edgeR, DESeq2, RColorBrewer, ggplot2, reshape2, ggpubr, extrafont, pheatmap, car, vegan))
 
 #font_import()
 #fonts()
@@ -53,6 +53,7 @@ invisible(pacman::p_load(dplyr, readxl, tidyverse, cowplot, edgeR, DESeq2, RColo
 #ggpubr need to bind plots together
 #extrafont for arial font
 #pheatmap needed for heatmaps
+#vegan for adonis2 (the PERMANOVA)
 ```
 
 # Data
@@ -104,99 +105,68 @@ table(d_n_WBC$samples$pair)
 #PC scores from genomic matrix
 Genomic_PCS <- read_csv("GenomicPC_scores_GEP.csv")
 Genomic_PCS <- subset(Genomic_PCS, select = c(PC1, PC2, PC3, PC4, PC5, ID.y, Sample))
-colnames(Genomic_PCS) <- "ID"
+colnames(Genomic_PCS)[6] <- "ID"
 Genomic_PCS$ID <- as.factor(Genomic_PCS$ID)
 #Combine
 d_n_all <- d_n_WBC
 d_n_all$samples <- left_join(d_n_all$samples, Genomic_PCS, by = c("Sample", "ID"))
+
+#Sample overview
+print(table(d_n_all$samples$pair, d_n_all$samples$life_history_stage))
+#SSB8_T8 has only pup samples
+#FWB23_N23 has only adult females samples
 ```
 
 # PCA
 
-Create a PCA plot to identify outliers.
+Prepare data for PCA
 
 ```{r}
-#| label: PCA_outlier
+#| label: PCA_data_prep
 #| echo: FALSE
 #| message: false
-#Use PCA to identify outliers. F24_FWB_mum_start_2018B was already removed at an earlier state
+#Explicitly set reference levels for the contrasts
+#Time point = group will have both but for the rest
+d_n_all$samples$life_history_stage <- relevel(d_n_all$samples$life_history_stage, ref = "Pup")
+d_n_all$samples$colony <- relevel(d_n_all$samples$colony, ref = "FWB")
+d_n_all$samples$year <- relevel(d_n_all$samples$year, ref = "2019_2020")
+
 cpm_mat <- cpm(d_n_all, log=TRUE)  #we need the log values
-exprs_mat <- cpm_mat
-exprs_t <- t(exprs_mat) #transpose
-pca_result <- prcomp(exprs_t, center = TRUE, scale. = TRUE)
 
-pca_var <- pca_result$sdev^2                  
-pca_var_explained <- pca_var / sum(pca_var)   
-round(pca_var_explained[1:2] * 100, 2)
+#test for multicollinearity among covariates
+vif(lm(as.numeric(d_n_all$samples$group) ~ WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5, data = d_n_all$samples)) #all
+#all covariates are below 1.3 confirming none of them to be strongly correlated 
 
-pc_scores <- as.data.frame(pca_result$x[, 1:2])  #keep PC1 and PC2
-pc_scores$Sample <- rownames(pc_scores)
-colnames(pc_scores) <- c("PC1_GE", "PC2_GE", "Sample")
-pc_scores <- left_join(pc_scores, d_n_all$samples, by = "Sample")
+#Following Smyth et al. 2005: https://doi.org/10.1093/bioinformatics/bti270
+#To account for repeated measures, we used removeBatchEffect from limma to correct the expression matrix
+#This effectively removes inter-individual variation
+exprs_corrected_full <- removeBatchEffect(cpm_mat, batch = d_n_all$samples$id)
 
-PCA_LHS <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = life_history_stage)) +
-  geom_point(size = 2) +
-  theme_classic() +
-  stat_ellipse(type = "norm", size = 0.5) +
-  xlim(-400, 150) +
-  ylim(-150, 150) +
-  labs(title = "(c) Life-history stage", x = "PC1_GE (23 %)", y = "PC2 (13 %)", color = NULL)
+#PCA with prcomp()
+pca_full <- prcomp(t(exprs_corrected_full), center = TRUE, scale. = TRUE)
 
-#levels(pc_scores$year)
-levels(pc_scores$year) <- c("2019", "2020")
-PCA_Y <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = year)) +
-  geom_point(size = 2) +
-  theme_classic() +
-  stat_ellipse(type = "norm", size = 0.5) +
-  xlim(-400, 150) +
-  ylim(-150, 150) +
-  labs(title = "(b) Season", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
+#Extract PC1 and PC2 
+pca_var_full <- pca_full$sdev^2                  
+pca_var_explained_full <- pca_var_full / sum(pca_var_full)   
+round(pca_var_explained_full[1:2] * 100, 2)
 
-#levels(pc_scores$group)
-levels(pc_scores$group) <- c("Day 0", "Day 60")
-PCA_TP <- ggplot(pc_scores, aes(x = PC1_GE_GE, y = PC2_GE, color = group)) +
-  geom_point(size = 2) +
-  theme_classic() +
-  stat_ellipse(type = "norm", size = 0.5) +
-  xlim(-400, 150) +
-  ylim(-150, 150) +
-  labs(title = "(d) Developmental time point", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
+plot(pca_var_explained_full, type="b", main="Scree Plot", xlab="Principal component", ylab="Variance Explained") #4 above 5%
 
-PCA_C <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = colony)) +
-  geom_point(size = 2) +
-  theme_classic() +
-  stat_ellipse(type = "norm", size = 0.5) +
-  xlim(-400, 150) +
-  ylim(-150, 150) +
-  labs(title = "(a) Density", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL)
+pc_scores_full <- as.data.frame(pca_full$x[, 1:2])  #keep PC1 and PC2
+pc_scores_full$Sample <- rownames(pc_scores_full)
+colnames(pc_scores_full) <- c("PC1_GE", "PC2_GE", "Sample")
+pc_scores_full <- left_join(pc_scores_full, d_n_all$samples, by = "Sample")
 
-legend_theme_outlier <- theme(
-    legend.position = c(0.05, 0.95), 
-    legend.justification = c("left", "top"),  
-    legend.background = element_rect(fill = alpha('white', 0.7), color = NA),  
-    legend.key.size = unit(0.8, "lines"),
-    text = element_text(family = "Arial", size = 12))
-
-PCA_plots_outlier <- plot_grid(PCA_C + legend_theme_outlier + theme(axis.title.x = element_blank()), 
-                               PCA_Y + legend_theme_outlier + theme(axis.title.x = element_blank(),
-                                                                      axis.title.y = element_blank()), 
-                               PCA_LHS + legend_theme_outlier, 
-                               PCA_TP + legend_theme_outlier + theme(axis.title.y = element_blank()), 
-                               ncol = 2)
-ggsave(here::here("Plots","PCA_plots_outlier_adj.png"), plot = PCA_plots_outlier, dpi = 600)
-
-write.csv(pc_scores, file = here::here("GenesGO", "pc_scores_adj.csv"))
-rm(exprs_mat, exprs_t, cpm_mat)
+write.csv(pc_scores_full, file = here::here("GenesGO", "pc_scores_full.csv"))
 ```
 
-![Principle component analysis of raw data](Plots/PCA_plots_outlier.png) The PCA identified **one** outlier, which was removed from the dataset for further analysis.
+Create a PCA plot to identify outliers. F24_FWB_mum_start_2018B was already removed at an earlier state
 
 ```{r}
 #| label: PCA
 #| echo: FALSE
 #| message: false
-#Plot in accordance to LHS and TP
-PCA_LHS <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = life_history_stage, shape = life_history_stage)) +
+PCA_LHS <- ggplot(pc_scores_full, aes(x = PC1_GE, y = PC2_GE, color = life_history_stage, shape = life_history_stage)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
@@ -206,9 +176,8 @@ PCA_LHS <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = life_history_st
   ylim(-200, 200) +
   labs(title = "(c) Life-history stage", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL, shape = NULL)
 
-#levels(pc_scores$group)
-levels(pc_scores$group) <- c("Day zero", "Day 60")
-PCA_TP <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = group, shape = group)) +
+levels(pc_scores_full$group) <- c("Day zero", "Day 60")
+PCA_TP <- ggplot(pc_scores_full, aes(x = PC1_GE, y = PC2_GE, color = group, shape = group)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
@@ -218,9 +187,8 @@ PCA_TP <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = group, shape = g
   ylim(-200, 200) +
   labs(title = "(d) Developmental time point", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL, shape = NULL)
 
-#levels(pc_scores$year)
-levels(pc_scores$year) <- c("2019", "2020")
-PCA_Y <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = year, shape = year)) +
+levels(pc_scores_full$year) <- c("2019", "2020")
+PCA_Y <- ggplot(pc_scores_full, aes(x = PC1_GE, y = PC2_GE, color = year, shape = year)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
@@ -230,7 +198,7 @@ PCA_Y <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = year, shape = yea
   ylim(-200, 200) +
   labs(title = "(b) Food availability", x = "PC1 (23 %)", y = "PC2 (13 %)", color = NULL, shape = NULL)
 
-PCA_C <- ggplot(pc_scores, aes(x = PC1_GE, y = PC2_GE, color = colony, shape = colony)) +
+PCA_C <- ggplot(pc_scores_full, aes(x = PC1_GE, y = PC2_GE, color = colony, shape = colony)) +
   geom_point(size = 2) +
   theme_classic() +
   stat_ellipse(type = "norm", size = 0.5) +
@@ -249,18 +217,91 @@ legend_theme <- theme(
 
 PCA_plots <- plot_grid(PCA_C + legend_theme + theme(axis.title.x = element_blank()),
                        PCA_Y + legend_theme + theme(axis.title.x = element_blank(),
-                                                      axis.title.y = element_blank()), 
+                                                    axis.title.y = element_blank()), 
                        PCA_LHS + legend_theme, 
-   
-                       
-                                           PCA_TP + legend_theme + theme(axis.title.y = element_blank()),
+                       PCA_TP + legend_theme + theme(axis.title.y = element_blank()),
                        ncol = 2)
 
-ggsave(here::here("Plots","PCA_plots_adj.png"), plot = PCA_plots, dpi = 600)
+ggsave(here::here("Plots","PCA_plots_full.png"), plot = PCA_plots, dpi = 600)
 rm(PCA_LHS, PCA_TP, PCA_Y, PCA_C)
 ```
 
-![Principle component analysis of processed data](Plots/PCA_plots_adj.png)
+![Principle component analysis of processed data](Plots/PCA_plots_full.png)
+## PCA test
+```{r}
+#| label: PCA_test
+#| echo: FALSE
+#| message: false
+#Test PCA
+#Create distance matrix from the corrected expression values
+distance_matrix_full <- dist(t(exprs_corrected_full), method = "euclidean")
+
+#PERMANOVA simple
+adonis2(distance_matrix_full ~ group + year + colony + life_history_stage,
+        data = d_n_all$samples, permutations = 1000, by = "margin")
+
+#PERMANOVA full
+adonis2(distance_matrix_full ~ group + year + colony + life_history_stage + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
+        data = d_n_all$samples, permutations = 5000, by = "margin")
+
+#PERMANOVA full + pair random effect
+adonis2(distance_matrix_full ~ group + year + colony + life_history_stage + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
+        strata = d_n_all$samples$pair, 
+        data = d_n_all$samples, permutations = 5000, by = "margin")
+
+#PERMANOVA interactions
+adonis2(distance_matrix_full ~ group * year + colony + life_history_stage + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
+        data = d_n_all$samples, permutations = 5000, by = "margin")
+
+adonis2(distance_matrix_full ~ group * colony + year + life_history_stage + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
+        data = d_n_all$samples, permutations = 5000, by = "margin")
+
+adonis2(distance_matrix_full ~ year * colony + group + life_history_stage + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
+        data = d_n_all$samples, permutations = 5000, by = "margin")
+
+adonis2(distance_matrix_full ~ colony * life_history_stage + group + year + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
+        data = d_n_all$samples, permutations = 5000, by = "margin")
+
+adonis2(distance_matrix_full ~ life_history_stage * group + year + colony + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
+        data = d_n_all$samples, permutations = 5000, by = "margin")
+
+adonis2(distance_matrix_full ~ life_history_stage * year + colony + group + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
+        strata = d_n_all$samples$pair,
+        data = d_n_all$samples, permutations = 5000, by = "margin")
+
+#Test for within group variance
+#https://www.rdocumentation.org/packages/vegan/versions/2.7-1/topics/permutest.betadisper
+bd_colony <- betadisper(distance_matrix_full, d_n_all$samples$colony)
+anova(bd_colony)
+(mod.HSD <- TukeyHSD(bd_colony))
+plot(mod.HSD)
+permutest(bd_colony, permutations = 1000)
+
+bd_year <- betadisper(distance_matrix_full, d_n_all$samples$year)
+anova(bd_year)
+(mod.HSD.y <- TukeyHSD(bd_year))
+plot(mod.HSD.y)
+permutest(bd_year, permutations = 1000)
+
+bd_lhs <- betadisper(distance_matrix_full, d_n_all$samples$life_history_stage)
+anova(bd_lhs)
+(mod.HSD.lhs <- TukeyHSD(bd_lhs))
+plot(mod.HSD.lhs)
+permutest(bd_lhs, permutations = 1000)
+
+bd_tp <- betadisper(distance_matrix_full, d_n_all$samples$group)
+anova(bd_tp)
+(mod.HSD.tp <- TukeyHSD(bd_tp))
+plot(mod.HSD.tp)
+permutest(bd_tp, permutations = 1000)
+
+par(mfrow = c(2, 2))
+boxplot(bd_colony, main = "Dispersion by colony")
+boxplot(bd_year, main = "Dispersion by year")
+boxplot(bd_lhs, main = "Dispersion by life-history stage")
+boxplot(bd_tp, main = "Dispersion by developmental time point")
+```
+
 
 # Differential gene expression analysis
 
@@ -291,12 +332,6 @@ Differential gene expression analysis combined for all contrasts and adding pair
 ```{r}
 #| label: DEG_Combined
 #| echo: FALSE
-
-#You need to explicitly set the reference levels
-#Time point = group will have both but for the rest
-d_n_all$samples$life_history_stage <- relevel(d_n_all$samples$life_history_stage, ref = "Pup")
-d_n_all$samples$colony <- relevel(d_n_all$samples$colony, ref = "FWB")
-d_n_all$samples$year <- relevel(d_n_all$samples$year, ref = "2019_2020")
 
 design_combined <- model.matrix(~ 0 + group + life_history_stage + colony + year, data = d_n_all$samples) #setting up model contrasts is more straight forward in the absence of an intercept 
 colnames(design_combined)
@@ -433,13 +468,13 @@ vobj_pairs <- voom(d_n_all, design_pairs, plot=TRUE)
 # 
 # # Fit a random effect
 dupcor_pairs <- duplicateCorrelation(vobj_all, design_pairs, block = d_n_all$samples$pair)
-dupcor_pairs$consensus #the estimated intra individual correlation (0.1337848)
+dupcor_pairs$consensus #the estimated intra pair correlation (0.1337848)
 # #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
 vobj_pairs = voom(d_n_all, design_pairs, plot=TRUE,
             block=d_n_all$samples$pair, correlation=dupcor_pairs$consensus)
 #update the correlation for the new voom weights
 dupcor_pairs <- duplicateCorrelation(vobj_pairs, design_pairs, block = d_n_all$samples$pair)
-dupcor_pairs$consensus #the estimated intra individual correlation (0.133939)
+dupcor_pairs$consensus #the estimated intra pair correlation (0.133939)
 
 #Fit the model
 vfit_pairs <- lmFit(vobj_pairs, design_pairs, block=d_n_all$samples$pair, correlation=dupcor_pairs$consensus)
@@ -539,7 +574,11 @@ Correcting for pc values accounting for genetic relatedness also slightly change
 #| label: Combined_Adjusted
 #| echo: FALSE
 #Plot for only time point and life history stage
-DEG_Combined_TPLHS_pairs <- ggarrange(combined_lhs_plot_pairs + fig_theme, combined_tp_plot_pairs + fig_theme + theme(axis.title.y = element_blank()), common.legend = T, legend = "bottom", widths = c(1, 0.95))
+DEG_Combined_TPLHS_pairs <- ggarrange(combined_lhs_plot_pairs + fig_theme + 
+  annotate("text", x = 3, y = 49, label = "Higher in mothers", size = 3) +
+  annotate("text", x = -3, y = 49, label = "Higher in pups", size = 3), combined_tp_plot_pairs + fig_theme + 
+  annotate("text", x = 3, y = 49, label = "Higher at day 60", size = 3) +
+  annotate("text", x = -3, y = 49, label = "Higher at day 0", size = 3) + theme(axis.title.y = element_blank()), common.legend = T, legend = "bottom", widths = c(1, 0.95))
 ggsave(here::here("Plots","DEG_Combined_TPLHS_pairs.png"), plot = DEG_Combined_TPLHS_pairs, width = 7, height = 3.5, dpi = 600)
 ```
 
@@ -691,6 +730,11 @@ GO_end_vs_start_DOWN <- enrichGO(Downregulated_end_vs_start_pairs$GeneSymbol,
                        pAdjustMethod = "BH") 
 GO_end_vs_start_DOWN <- GO_end_vs_start_DOWN %>%
   mutate(Regulation = "Downregulated") 
+
+
+Background_tp <- read.csv("GenesGO/All_tp.csv") %>%
+  mutate(X = toupper(X))
+colnames(Background_tp)[1] <- "GeneSymbol"
 
 GO_end_vs_start_UP <- enrichGO(Upregulated_end_vs_start_pairs$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
