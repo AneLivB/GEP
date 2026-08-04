@@ -73,7 +73,7 @@ summary(sequences$Total.Sequences)
 
 ## White blood counts
 WBC <- read_excel("WBCcounts_GEP.xlsx")
-
+table(d_n$samples$life_history_stage)
 ##Combined
 d_n$samples <- left_join(d_n$samples, WBC, by = "Sample")
 head(d_n$samples)
