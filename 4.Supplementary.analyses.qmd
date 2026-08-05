@@ -175,7 +175,7 @@ PCA_sex <- ggplot(pc_scores_pups, aes(x = PC1_GE, y = PC2_GE, color = sex, shape
   scale_shape_manual(values = c(16,17)) +
   xlim(-200, 200) +
   ylim(-200, 200) +
-  labs(title = "Offspring sex", x = "PC1 (18 %)", y = "PC2 (15 %)", color = NULL, shape = NULL)
+  labs(title = "Pup sex", x = "PC1 (18 %)", y = "PC2 (15 %)", color = NULL, shape = NULL)
 
 ggsave(here::here("Plots","PCA_plots_sex.png"), plot = PCA_sex, dpi = 600)
 rm(PCA_sex)
@@ -191,21 +191,9 @@ rm(PCA_sex)
 #Create distance matrix from the corrected expression values
 distance_matrix_pups <- dist(t(exprs_corrected_pups), method = "euclidean")
 
-#PERMANOVA simple
+#PERMANOVA 
 adonis2(distance_matrix_pups ~ sex,
         data = d_n_pups_all$samples, permutations = 1000, by = "margin") #no effect of sex
-
-#PERMANOVA with contrasts
-adonis2(distance_matrix_pups ~ group + year + colony + sex,
-        data = d_n_pups_all$samples, permutations = 5000, by = "margin") #no effect of sex
-
-#PERMANOVA biological
-adonis2(distance_matrix_pups ~ sex + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
-        data = d_n_pups_all$samples, permutations = 5000, by = "margin") #no effect of sex
-
-#PERMANOVA full
-adonis2(distance_matrix_pups ~ group + year + colony + sex + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
-        data = d_n_pups_all$samples, permutations = 5000, by = "margin") #no effect of sex
 
 #Test for within group variance
 #https://www.rdocumentation.org/packages/vegan/versions/2.7-1/topics/permutest.betadisper
@@ -220,13 +208,13 @@ boxplot(bd_sex, main = "Dispersion by sex")
 ```
 
 # Differential gene expression analysis
-## By offspring sex
+## By pup sex
 
 ```{r}
 #| label: DEG_Combined
 #| echo: FALSE
 
-design_sex <- model.matrix(~ 0 + sex + group + year + colony + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5, data = d_n_pups_all$samples) 
+design_sex <- model.matrix(~ 0 + sex, data = d_n_pups_all$samples) 
 
 colnames(design_sex)
 contr.matrix.sex <- makeContrasts(
