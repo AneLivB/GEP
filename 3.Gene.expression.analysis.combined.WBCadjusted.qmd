@@ -227,7 +227,7 @@ rm(PCA_LHS, PCA_TP, PCA_Y, PCA_C)
 ```
 
 ![Principle component analysis of processed data](Plots/PCA_plots_full.png)
-## PCA test
+## PERMANOVA & betadisper test
 ```{r}
 #| label: PCA_test
 #| echo: FALSE
@@ -247,26 +247,6 @@ adonis2(distance_matrix_full ~ group + year + colony + life_history_stage + WBC_
 #PERMANOVA full + pair random effect
 adonis2(distance_matrix_full ~ group + year + colony + life_history_stage + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
         strata = d_n_all$samples$pair, 
-        data = d_n_all$samples, permutations = 5000, by = "margin")
-
-#PERMANOVA interactions
-adonis2(distance_matrix_full ~ group * year + colony + life_history_stage + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
-        data = d_n_all$samples, permutations = 5000, by = "margin")
-
-adonis2(distance_matrix_full ~ group * colony + year + life_history_stage + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
-        data = d_n_all$samples, permutations = 5000, by = "margin")
-
-adonis2(distance_matrix_full ~ year * colony + group + life_history_stage + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
-        data = d_n_all$samples, permutations = 5000, by = "margin")
-
-adonis2(distance_matrix_full ~ colony * life_history_stage + group + year + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
-        data = d_n_all$samples, permutations = 5000, by = "margin")
-
-adonis2(distance_matrix_full ~ life_history_stage * group + year + colony + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
-        data = d_n_all$samples, permutations = 5000, by = "margin")
-
-adonis2(distance_matrix_full ~ life_history_stage * year + colony + group + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5,
-        strata = d_n_all$samples$pair,
         data = d_n_all$samples, permutations = 5000, by = "margin")
 
 #Test for within group variance
