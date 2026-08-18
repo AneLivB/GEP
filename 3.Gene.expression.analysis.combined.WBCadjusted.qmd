@@ -711,11 +711,6 @@ GO_end_vs_start_DOWN <- enrichGO(Downregulated_end_vs_start_pairs$GeneSymbol,
 GO_end_vs_start_DOWN <- GO_end_vs_start_DOWN %>%
   mutate(Regulation = "Downregulated") 
 
-
-Background_tp <- read.csv("GenesGO/All_tp.csv") %>%
-  mutate(X = toupper(X))
-colnames(Background_tp)[1] <- "GeneSymbol"
-
 GO_end_vs_start_UP <- enrichGO(Upregulated_end_vs_start_pairs$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
                        universe = Background_tp_pairs$GeneSymbol,
@@ -727,7 +722,6 @@ GO_end_vs_start_UP <- GO_end_vs_start_UP %>%
   mutate(Regulation = "Upregulated") 
 
 #Life history stage
-#Downregulated_lhs <- Downregulated_lhs[,-1]  #If the code doesn't run as it's supposed to
 GO_adult_vs_pup_DOWN <- enrichGO(Downregulated_adult_vs_pup_pairs$GeneSymbol,
                        OrgDb = org.Hs.eg.db,
                        universe = Background_lhs_pairs$GeneSymbol,
@@ -760,23 +754,28 @@ GO_adult_vs_pup_UP <- GO_adult_vs_pup_UP %>%
 GO_end_vs_start_pairs <- rbind(as.data.frame(GO_end_vs_start_DOWN), as.data.frame(GO_end_vs_start_UP)) %>%
   arrange(p.adjust) 
 
-write.csv(GO_end_vs_start_pairs, here::here("GenesGO", "GO_end_vs_start_pairs.csv"), row.names = F)
+#Identify top20
+GO_end_vs_start_pairs_Top20 <- GO_end_vs_start_pairs %>%
+  arrange(p.adjust) %>%
+  slice_head(n = 20) 
 
 #Fancy smancy bubble plot
-plot_end_vs_start_pairs <- ggplot(GO_end_vs_start_pairs, aes(x = zScore, y = -log10(p.adjust))) +
+plot_end_vs_start_pairs <- ggplot(GO_end_vs_start_pairs_Top20, aes(x = zScore, y = -log10(p.adjust))) +
   geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.5) +
 
   scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  
   scale_fill_manual(values = c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5")) +
   scale_size_continuous(name = "DEG Count") +
+  #ylim(1.6,1.615) +
   #Add the top terms to the plot
   geom_text_repel(
-  data = GO_end_vs_start_pairs,  
+  data = GO_end_vs_start_pairs_Top20,  
   aes(label = ID),
+  #nudge_y = 0.03,         #moves label up
   size = 2.5,
   segment.color = NA,
-  max.overlaps = Inf
-) +
+  force = 2, 
+  max.overlaps = Inf) +
   labs(
     title = "(b) Developmental time point",
     x = "Z-score",
@@ -795,12 +794,35 @@ plot_end_vs_start_pairs <- ggplot(GO_end_vs_start_pairs, aes(x = zScore, y = -lo
   fill = "none" 
 )
 
-#Top GO terms and description
-GO_end_vs_start_pairs_table <- GO_end_vs_start_pairs[, c("ID", "Description")]
-colnames(GO_end_vs_start_pairs_table) <- c("GO Term", "Description")
-rownames(GO_end_vs_start_pairs_table) <- NULL
+#Top 20 GO terms and description
+GO_end_vs_start_pairs_Top20_table <- GO_end_vs_start_pairs_Top20[, c("ID", "Description")]
+colnames(GO_end_vs_start_pairs_Top20_table) <- c("GO Term", "Description")
+rownames(GO_end_vs_start_pairs_Top20_table) <- NULL
+#Force line break
+GO_end_vs_start_pairs_Top20_table$Description <- str_wrap(GO_end_vs_start_pairs_Top20_table$Description, width = 54)
+
+# Create alternating row colors
+row_colors <- rep(c("white", "#f0f0f0"), length.out = nrow(GO_end_vs_start_pairs_Top20_table))
+
+#Table
+p_table_end_vs_start_pairs <- ggtexttable(
+  GO_end_vs_start_pairs_Top20_table,
+  rows = NULL,
+  theme = ttheme(
+    "light",
+    tbody = list(bg_params = list(fill = row_colors))))
+
+EA_end_vs_start_pairs <- plot_grid(
+ plot_end_vs_start_pairs + fig_theme + theme(legend.position = "none"),
+ NULL,
+ p_table_end_vs_start_pairs,
+ ncol = 3,
+ rel_widths = c(1, 0.05, 0.8))
+
 
 ggsave(here::here("Plots","Bubble_end_vs_start_pairs.png"), plot = plot_end_vs_start_pairs + fig_theme, width = 6, height = 4, dpi = 600)
+
+ggsave(here::here("Plots", "EA_end_vs_start_pairs.png"), plot = EA_end_vs_start_pairs + fig_theme, width = 10, height = 6, dpi = 600)
 ```
 
 ### Life history stage
@@ -812,25 +834,27 @@ ggsave(here::here("Plots","Bubble_end_vs_start_pairs.png"), plot = plot_end_vs_s
 GO_adult_vs_pup_pairs <- rbind(as.data.frame(GO_adult_vs_pup_DOWN), as.data.frame(GO_adult_vs_pup_UP)) %>%
   arrange(p.adjust) 
 
-write.csv(GO_adult_vs_pup_pairs, here::here("GenesGO", "GO_adult_vs_pup_pairs.csv"), row.names = F)
+#Identify top20
+GO_adult_vs_pup_pairs_Top20 <- GO_adult_vs_pup_pairs %>%
+  arrange(p.adjust) %>%
+  slice_head(n = 20) 
 
 #Fancy smancy bubble plot
 plot_adult_vs_pup_pairs <- ggplot(GO_adult_vs_pup_pairs, aes(x = zScore, y = -log10(p.adjust))) +
   geom_point(aes(size = Count, shape = Regulation, fill = Regulation), color = "black", alpha = 0.5) +
-
   scale_shape_manual(values = c("Upregulated" = 24, "Downregulated" = 25)) +  
   scale_fill_manual(values = c("Upregulated" = "#FDA172", "Downregulated" = "#9867B5")) +
   scale_size_continuous(name = "DEG Count") +
   #Add the top terms to the plot
   geom_text_repel(
-  data = GO_adult_vs_pup_pairs,  
+  data = GO_adult_vs_pup_pairs_Top20,  
   aes(label = ID),
   nudge_y = 0.03,         #moves label up
   size = 2.5,
   segment.color = NA,
   force = 2, 
   max.overlaps = Inf
-) +
+  ) +
   labs(
     title = "(a) Life-history stage",
     x = "Z-score",
@@ -850,9 +874,274 @@ plot_adult_vs_pup_pairs <- ggplot(GO_adult_vs_pup_pairs, aes(x = zScore, y = -lo
 )
 
 #Top 20 GO terms and description
-GO_adult_vs_pup_pairs_table <- GO_adult_vs_pup_pairs[, c("ID", "Description")]
-colnames(GO_adult_vs_pup_pairs_table) <- c("GO Term", "Description")
-rownames(GO_adult_vs_pup_pairs_table) <- NULL
+GO_adult_vs_pup_pairs_Top20_table <- GO_adult_vs_pup_pairs_Top20[, c("ID", "Description")]
+colnames(GO_adult_vs_pup_pairs_Top20_table) <- c("GO Term", "Description")
+rownames(GO_adult_vs_pup_pairs_Top20_table) <- NULL
 
-ggsave(here::here("Plots","Bubble_adult_vs_pup_pairs.png"), plot = plot_adult_vs_pup_pairs + fig_theme,  width = 6, height = 4, dpi = 600)
+#Force line break
+GO_adult_vs_pup_pairs_Top20_table$Description <- str_wrap(GO_adult_vs_pup_pairs_Top20_table$Description, width = 50)
+
+# Create alternating row colors
+row_colors <- rep(c("white", "#f0f0f0"), length.out = nrow(GO_adult_vs_pup_pairs_Top20_table))
+
+#Table
+p_table_adult_vs_pup_pairs <- ggtexttable(
+  GO_adult_vs_pup_pairs_Top20_table,
+  rows = NULL,
+  theme = ttheme(
+    "light",
+    tbody = list(bg_params = list(fill = row_colors))))
+
+EA_adult_vs_pup_pairs <- plot_grid(
+ plot_adult_vs_pup_pairs + fig_theme + theme(legend.position = "none"),
+ NULL,
+ p_table_adult_vs_pup_pairs,
+ ncol = 3,
+ rel_widths = c(1, 0.05, 1))
+
+ggsave(here::here("Plots","plot_adult_vs_pup_pairs.png"), plot = plot_adult_vs_pup_pairs + fig_theme,  width = 5.5, height = 5, dpi = 600)
+
+ggsave(here::here("Plots","EA_adult_vs_pup.png"), plot = EA_adult_vs_pup_pairs + fig_theme,  width = 10, height = 6.1, dpi = 600)
+```
+
+## Revigo in R
+
+REduce and VIsualise Gene Ontology - a tool to reduce redundant GO terms and group the terms based on semantic similarity.
+
+```{r}
+#| label: load_revigo
+#| echo: FALSE
+remotes::install_github("ssayols/rrvgo")
+library(rrvgo)
+```
+
+### Similarity matrices
+
+#### Adjusted
+
+```{r}
+#| label: Similarity_matrices
+#| echo: FALSE
+#calculate similarity matrices for all contrasts
+SM_end_vs_start_DOWN <- calculateSimMatrix(GO_end_vs_start_DOWN$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
+SM_end_vs_start_UP <- calculateSimMatrix(GO_end_vs_start_UP$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
+SM_adult_vs_pup_DOWN <- calculateSimMatrix(GO_adult_vs_pup_DOWN$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
+SM_adult_vs_pup_UP <- calculateSimMatrix(GO_adult_vs_pup_UP$ID, orgdb = "org.Hs.eg.db", ont = "BP", method = "Rel")
+
+GO_upregulatedinpups <- as.data.frame(GO_adult_vs_pup_DOWN)
+GO_upregulatedinmothers <- as.data.frame(GO_adult_vs_pup_UP)
+```
+
+
+### Reduce terms
+
+```{r}
+#| label: Reduce_terms
+#| echo: FALSE
+## Time point
+# Compute scores TP_DOwn
+scores_end_vs_start_DOWN <- -log10(as.numeric(GO_end_vs_start_DOWN$p.adjust))
+names(scores_end_vs_start_DOWN) <- GO_end_vs_start_DOWN$ID
+
+#Reduce terms
+reduced_end_vs_start_DOWN <- reduceSimMatrix(
+    simMatrix = SM_end_vs_start_DOWN ,
+    scores = scores_end_vs_start_DOWN,
+    threshold = 0.7,
+    orgdb = "org.Hs.eg.db")
+
+# Compute scores TP_UP
+scores_end_vs_start_UP <- -log10(as.numeric(GO_end_vs_start_UP$p.adjust))
+names(scores_end_vs_start_UP) <- GO_end_vs_start_UP$ID
+
+#Reduce terms
+reduced_end_vs_start_UP <- reduceSimMatrix(
+    simMatrix = SM_end_vs_start_UP,
+    scores = scores_end_vs_start_UP,
+    threshold = 0.7,
+    orgdb = "org.Hs.eg.db")
+
+## Life hisotry stage
+## Compute scores LHS_UP
+#scores_adult_vs_pup_UP <- -log10(as.numeric(GO_adult_vs_pup_UP$p.adjust))
+#names(scores_adult_vs_pup_UP) <- GO_adult_vs_pup_UP$ID
+#
+##Reduce terms
+#reduced_adult_vs_pup_UP <- reduceSimMatrix(
+#    simMatrix = SM_adult_vs_pup_UP,
+#    scores = scores_adult_vs_pup_UP,
+#    threshold = 0.7,
+#    orgdb = "org.Hs.eg.db")
+#
+# Compute scores LHS_DOWN
+scores_adult_vs_pup_DOWN <- -log10(as.numeric(GO_adult_vs_pup_DOWN$p.adjust))
+names(scores_adult_vs_pup_DOWN) <- GO_adult_vs_pup_DOWN$ID
+
+#Reduce terms
+reduced_adult_vs_pup_DOWN <- reduceSimMatrix(
+    simMatrix = SM_adult_vs_pup_DOWN,
+    scores = scores_adult_vs_pup_DOWN,
+    threshold = 0.7,
+    orgdb = "org.Hs.eg.db")
+```
+
+#### Scatterplot with more flexibility
+
+```{r}
+#| label: scatterplot_manual
+#| echo: FALSE
+parent_colors <- c(
+  "#FDA172",  # orange
+  "#9867B5",  # purple
+  "#8B9E58",  # olive green
+  "#638B9B",  # teal
+  "#C44B4E",  # deep red
+  "#C46A00",  # rusty orange
+  "#B58E36",  # golden brown
+  "#6C75A9"   # muted blue-grey
+)
+
+# Function to generate semantic similarity scatter plot
+plot_semantic_similarity <- function(simMatrix, reducedTerms, title_text, 
+                                     parent_colors, xlim_val = c(-1, 1), ylim_val = c(-1, 1),
+                                     point_alpha = 0.5, point_range = c(0, 20), label_size = 2.5,
+                                     top_n = NULL, min_score = NULL, box_padding = 0.05) {
+  
+  # 1. Distance matrix
+  dist_mat <- as.dist(1 - simMatrix)
+  
+  # 2. MDS
+  mds <- cmdscale(dist_mat, eig = TRUE, k = 2)
+  
+  # 3. Build dataframe with metadata
+  df <- as.data.frame(mds$points)
+  df$go <- rownames(df)
+  df <- merge(df, reducedTerms[, c("go", "term", "parent", "parentTerm", "score")],
+              by = "go", all.x = TRUE)
+  
+  # 4.select top 5 most important parent terms
+top_per_parent <- df %>%
+  group_by(parent) %>%
+  slice_max(score, n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+top_parents <- top_per_parent %>%
+  arrange(desc(score)) %>%
+  slice(1:5) %>%   # top 5 parents
+  pull(parent) 
+
+label_data <- df %>%
+  filter(parent %in% top_parents) %>%
+  group_by(parentTerm) %>%
+  summarise(
+    V1 = mean(V1),
+    V2 = mean(V2),
+    score = max(score)
+  ) %>%
+  ungroup()
+  
+  # 5. Filter top N or by minimum score if requested
+  if(!is.null(top_n)) {
+    label_data <- label_data %>% arrange(desc(score)) %>% slice(1:top_n)
+  }
+  if(!is.null(min_score)) {
+    label_data <- label_data %>% filter(score >= min_score)
+  }
+  
+  # 6. Plot
+  p <- ggplot(df, aes(x = V1, y = V2, color = parentTerm)) +
+    geom_point(aes(size = score), alpha = point_alpha) +
+    scale_color_manual(values = parent_colors, guide = "none") +
+    scale_size_continuous(range = point_range, guide = "none") +
+    theme_classic() +
+    xlim(xlim_val) +
+    ylim(ylim_val) +
+    xlab("Semantic space x") +
+    ylab("Semantic space y") +
+    ggtitle(title_text) +
+    geom_text(
+      data = data.frame(V1 = Inf, V2 = Inf),
+      aes(x = V1, y = V2, label = paste0("italic(n) == ", nrow(reducedTerms))), #add the number of terms
+      parse = TRUE,
+      hjust = 1.1, vjust = 1.5, size = 4, 
+      inherit.aes = FALSE
+    ) +
+    geom_label_repel(aes(label = parentTerm),
+                     data = label_data,
+                     force = 1,
+                     box.padding = unit(box_padding, "lines"),
+                     point.padding = unit(0.3, "lines"),
+                     size = label_size,
+                     max.overlaps = Inf)
+  
+  return(p)
+}
+
+# -------------------------------
+# Example usage for your four datasets
+
+SP_end_vs_start_UP   <- plot_semantic_similarity(SM_end_vs_start_UP, reduced_end_vs_start_UP, 
+                                          "(d) Upregulated on day 60", parent_colors)
+SP_end_vs_start_DOWN <- plot_semantic_similarity(SM_end_vs_start_DOWN, reduced_end_vs_start_DOWN, 
+                                          "(c) Downregulated on day 60", parent_colors)
+
+scores_LHS_UP <- -log10(as.numeric(GO_adult_vs_pup_UP$p.adjust))
+names(scores_LHS_UP) <- GO_adult_vs_pup_UP$ID
+SS_LHS_adj <- as.data.frame(cbind(GO_adult_vs_pup_UP$ID, -log10(as.numeric(GO_adult_vs_pup_UP$p.adjust)), GO_adult_vs_pup_UP$Description, 0, 0))
+colnames(SS_LHS_adj) <- c("ID", "score", "Description", "V1", "V2")
+SS_LHS_adj$V1 <- as.numeric(SS_LHS_adj$V1)
+SS_LHS_adj$V2 <- as.numeric(SS_LHS_adj$V2)
+SS_LHS_adj$score <- as.numeric(SS_LHS_adj$score)
+
+xlim_val = c(-1, 1)
+ylim_val = c(-1, 1)
+SP_adult_vs_pup_UP <- ggplot(SS_LHS_adj, aes(x = V1, y = V2, color = Description)) +
+    geom_point(aes(size = score), alpha = 0.5) +
+    scale_color_manual(values = parent_colors, guide = "none") +
+    scale_size_continuous(range = c(0, 20), guide = "none") +
+    theme_classic() +
+    xlim(xlim_val) +
+    ylim(ylim_val) +
+    xlab("Semantic space x") +
+    ylab("Semantic space y") +
+    ggtitle("(a) Upregulated in mothers") +
+    geom_text(
+      data = data.frame(V1 = Inf, V2 = Inf),
+      aes(x = V1, y = V2, label = "italic(n) == 1"),
+      parse = TRUE,
+      hjust = 1.1, vjust = 1.5, size = 4,
+      inherit.aes = FALSE
+    ) +
+    geom_label_repel(aes(label = Description),
+                     data = SS_LHS_adj,
+                     force = 1,
+                     box.padding = unit(0.09, "lines"),
+                     point.padding = unit(0.2, "lines"),
+                     size = 2.5,
+                     max.overlaps = Inf)
+
+
+
+
+parent_colors <- c(
+ "#FDA172", "#9867B5", "#8B9E58", "#4C6A92",
+ "#C44B4E", "#C46A00", "#B58E36", "#6C75A9",
+ "#A67C52", "#7A5E7E", "#5C8C6B", "#7289B0",
+ "#D98C6D", "#8B6D92", "#B5A04C", "#587085",
+ "#C4889F", "#74935E", "#9A7C5D", "#66778B", "#A37B9A")
+
+SP_adult_vs_pup_DOWN <- plot_semantic_similarity(SM_adult_vs_pup_DOWN, reduced_adult_vs_pup_DOWN, 
+                                        "(b) Upregulated in pups", parent_colors, box_padding = 0.27, label_size = 2.43)
+
+  
+SP_adult_vs_pup <- plot_grid(SP_adult_vs_pup_UP + 
+                        theme(axis.title.x = element_blank()) + fig_theme,  
+                      SP_adult_vs_pup_DOWN + fig_theme + theme(axis.title = element_blank()), rel_widths = c(1.05, 1))
+SP_end_vs_start <- plot_grid(SP_end_vs_start_DOWN + fig_theme, 
+                       SP_end_vs_start_UP + fig_theme + coord_cartesian(clip = "off") + theme(axis.title.y = element_blank(),
+  plot.margin = margin(5, 10, 5, 5)), ncol = 2, rel_widths = c(1.05, 1))  
+  
+combined_SP_pairs <- plot_grid(SP_adult_vs_pup, SP_end_vs_start, ncol = 1)
+
+ggsave(here::here("Plots", "combined_SP_pairs.png"), plot = combined_SP_pairs, width = 7, height = 7, dpi = 600)
 ```

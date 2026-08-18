@@ -296,6 +296,7 @@ d_n_WBC$samples$ID <- as.factor(d_n_WBC$samples$ID)
 d_n_WBC$samples$year <- as.factor(d_n_WBC$samples$year)
 d_n_WBC$samples$group <- as.factor(d_n_WBC$samples$group)
 d_n_WBC$samples$pair <- as.factor(d_n_WBC$samples$pair)
+
 rm(d_n)
 dim(d_n_WBC)
 table(d_n_WBC$samples$pair)
@@ -367,7 +368,7 @@ Based on the PERMANOVA, there's no significant interaction between density and f
 
 ## Differential gene expression analysis for interactions
 
-In this section, we will perform differential gene expression analysis to identify genes that are differentially expressed in the following interactions: colony and developmental time point, season and life-history stage, season and developmental time point and finally life-history stage and develpomental time point. 
+In this section, we will perform differential gene expression analysis to identify genes that are differentially expressed in the following interactions: colony and developmental time point, season and life-history stage, season and developmental time point and finally life-history stage and developmental time point. 
 
 ```{r}
 #| label: color_scheme
