@@ -364,7 +364,7 @@ adonis2(distance_matrix_full ~ life_history_stage * year + colony + group + WBC_
         strata = d_n_all$samples$pair,
         data = d_n_all$samples, permutations = 5000, by = "margin")
 ```
-Based on the PERMANOVA, there's no significant interaction between density and food availability nor density and life-history stage. Therefore, we do not test for these interactions in the following differential gene expression analysis. 
+Based on the PERMANOVA, there's no significant interaction between density and food availability nor density and life-history stage. 
 
 ## Differential gene expression analysis for interactions
 
@@ -450,6 +450,130 @@ topTreat(tfit_C_TP)
 nrow(tfit_C_TP)
 dt_C_TP <- decideTests(tfit_C_TP, adjust.method="fdr")
 summary(dt_C_TP) #No effect of the interaction
+```
+
+### C_LHS
+```{r}
+#| label: DEG_interaction_C_LHS
+#| echo: FALSE
+
+#Setup interaction between colony and life history stage (C_LHS)
+d_n_all$samples$C_LHS <- interaction(d_n_all$samples$colony, d_n_all$samples$life_history_stage, sep = "_")
+
+design_C_LHS <- model.matrix(~ 0 + C_LHS + group + year + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5, data = d_n_all$samples) #setting up model contrasts is more straight forward in the absence of an intercept 
+colnames(design_C_LHS)
+
+contr.matrix.C_LHS <- makeContrasts(
+  #Main effects
+  #LHS effects within colony
+  LHS_FWB = C_LHSFWB_Mother - C_LHSFWB_Pup,
+  LHS_SSB = C_LHSSSB_Mother - C_LHSSSB_Pup,
+  #Colony effect on LHS
+  Colony_Pup = C_LHSFWB_Pup - C_LHSSSB_Pup,
+  Colony_Mother = C_LHSFWB_Mother - C_LHSSSB_Mother,
+  #The interaction
+  #Does the effect of density differ for mothers and pups
+  Interaction = (C_LHSFWB_Mother - C_LHSSSB_Mother)-(C_LHSFWB_Pup - C_LHSSSB_Pup),
+  levels = design_C_LHS) #create matrix for contrasts
+
+# Use voom to remove variance dependency on mean
+vobj_C_LHS <- voom(d_n_all, design_C_LHS, plot=TRUE)
+# 
+# # Fit a random effect
+dupcor_C_LHS <- duplicateCorrelation(vobj_C_LHS, design_C_LHS, block = d_n_all$samples$pair)
+dupcor_C_LHS$consensus #the estimated intra individual correlation (0.1344206)
+# #the intra individual correlation will change the voom weights slightly
+# #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
+vobj_C_LHS = voom(d_n_all, design_C_LHS, plot=TRUE,
+            block=d_n_all$samples$pair, correlation=dupcor_C_LHS$consensus)
+#update the correlation for the new voom weights
+dupcor_C_LHS <- duplicateCorrelation(vobj_C_LHS, design_C_LHS, block = d_n_all$samples$pair)
+dupcor_C_LHS$consensus #the estimated intra individual correlation (0.1344297)
+#Fit the model
+vfit_C_LHS <- lmFit(vobj_C_LHS, design_C_LHS, block=d_n_all$samples$pair, correlation=dupcor_C_LHS$consensus)
+vfit_C_LHS <- contrasts.fit(vfit_C_LHS, contrasts=contr.matrix.C_LHS)
+
+# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
+efit_C_LHS <- eBayes(vfit_C_LHS)
+topTable(efit_C_LHS, n=20)
+plotSA(efit_C_LHS, main="Final model: Mean-variance trend")
+plotMD(efit_C_LHS)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit_C_LHS$F
+head(efit_C_LHS$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA)
+head(efit_C_LHS$p.value) #same
+summary(decideTests(efit_C_LHS, adjust.method="fdr"))
+#set log-fold-changes (log-FCs) to be above a minimum value. 
+
+tfit_C_LHS <- treat(vfit_C_LHS, lfc=lfc) #lfc = 1
+topTreat(tfit_C_LHS)
+nrow(tfit_C_LHS)
+dt_C_LHS <- decideTests(tfit_C_LHS, adjust.method="fdr")
+summary(dt_C_LHS) #No effect of the interaction
+```
+
+### C_Y
+```{r}
+#| label: DEG_interaction_C_Y
+#| echo: FALSE
+
+#Setup interaction between colony and year (C_LHS)
+d_n_all$samples$C_Y <- interaction(d_n_all$samples$colony, d_n_all$samples$year, sep = "_")
+
+design_C_Y <- model.matrix(~ 0 + C_Y + group + life_history_stage + WBC_ratio_log + PC1 + PC2 + PC3 + PC4 + PC5, data = d_n_all$samples) #setting up model contrasts is more straight forward in the absence of an intercept 
+colnames(design_C_Y)
+
+contr.matrix.C_Y <- makeContrasts(
+  #Main effects
+  #Y effects within colony
+  Y_FWB = C_YFWB_2019_2020 - C_YFWB_2018_2019,
+  Y_SSB = C_YSSB_2019_2020 - C_YSSB_2018_2019,
+  #Colony effect on Y
+  Colony_2018_2019 = C_YFWB_2018_2019 - C_YSSB_2018_2019,
+  Colony_2019_2020 = C_YFWB_2019_2020 - C_YSSB_2019_2020,
+  #The interaction
+  #Does the effect of density differ between seasons
+  Interaction = (C_YFWB_2019_2020 - C_YSSB_2019_2020)-(C_YFWB_2018_2019 - C_YSSB_2018_2019),
+  levels = design_C_Y) #create matrix for contrasts
+
+# Use voom to remove variance dependency on mean
+vobj_C_Y <- voom(d_n_all, design_C_Y, plot=TRUE)
+# 
+# # Fit a random effect
+dupcor_C_Y <- duplicateCorrelation(vobj_C_Y, design_C_Y, block = d_n_all$samples$pair)
+dupcor_C_Y$consensus #the estimated intra individual correlation (0.1318792)
+# #the intra individual correlation will change the voom weights slightly
+# #run voom again considering the duplicateCorrelation results in order to compute more accurate precision weights
+vobj_C_Y = voom(d_n_all, design_C_Y, plot=TRUE,
+            block=d_n_all$samples$pair, correlation=dupcor_C_Y$consensus)
+#update the correlation for the new voom weights
+dupcor_C_Y <- duplicateCorrelation(vobj_C_Y, design_C_Y, block = d_n_all$samples$pair)
+dupcor_C_Y$consensus #the estimated intra individual correlation (0.1318963)
+#Fit the model
+vfit_C_Y <- lmFit(vobj_C_Y, design_C_Y, block=d_n_all$samples$pair, correlation=dupcor_C_Y$consensus)
+vfit_C_Y <- contrasts.fit(vfit_C_Y, contrasts=contr.matrix.C_Y)
+
+# Fit Empirical Bayes for moderated t-statistics, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability
+efit_C_Y <- eBayes(vfit_C_Y)
+topTable(efit_C_Y, n=20)
+plotSA(efit_C_Y, main="Final model: Mean-variance trend")
+plotMD(efit_C_Y)
+abline(h=0,col="darkgrey")
+
+#adjusted p-value cutoff that is set at 5% by default.
+efit_C_Y$F
+head(efit_C_Y$F.p.value) #pval of the moderated F-statistics (equivalent to one-way ANOVA)
+head(efit_C_Y$p.value) #same
+summary(decideTests(efit_C_Y, adjust.method="fdr"))
+#set log-fold-changes (log-FCs) to be above a minimum value. 
+
+tfit_C_Y <- treat(vfit_C_Y, lfc=lfc) #lfc = 1
+topTreat(tfit_C_Y)
+nrow(tfit_C_Y)
+dt_C_Y <- decideTests(tfit_C_Y, adjust.method="fdr")
+summary(dt_C_Y) #No effect of the interaction
 ```
 
 ### Y_LHS
