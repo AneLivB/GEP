@@ -366,6 +366,83 @@ adonis2(distance_matrix_full ~ life_history_stage * year + colony + group + WBC_
 ```
 Based on the PERMANOVA, there's no significant interaction between density and food availability nor density and life-history stage. 
 
+### Explore direction of patterns in significant PERMANOVAs
+```{r}
+#transpose distance matrix
+expr_df <- as.data.frame(t(exprs_corrected_full))
+n_genes <- nrow(exprs_corrected_full)
+
+#Add meta data
+expr_df$colony             <- d_n_all$samples$colony
+expr_df$year               <- d_n_all$samples$year
+expr_df$life_history_stage <- d_n_all$samples$life_history_stage
+expr_df$group              <- d_n_all$samples$group
+
+#C_Y
+FWB_2020 <- colMeans(expr_df[expr_df$colony == "FWB" & expr_df$year == "2019_2020", 1:n_genes])
+FWB_2019 <- colMeans(expr_df[expr_df$colony == "FWB" & expr_df$year == "2018_2019", 1:n_genes])
+
+SSB_2020 <- colMeans(expr_df[expr_df$colony == "SSB" & expr_df$year == "2019_2020", 1:n_genes])
+SSB_2019 <- colMeans(expr_df[expr_df$colony == "SSB" & expr_df$year == "2018_2019", 1:n_genes])
+
+FWB_Y <- sqrt(sum((FWB_2019 - FWB_2020)^2))
+SSB_Y <- sqrt(sum((SSB_2019 - SSB_2020)^2))
+
+#Y_LHS
+Pup_2020 <- colMeans(expr_df[expr_df$life_history_stage == "Pup" & expr_df$year == "2019_2020", 1:n_genes])
+Pup_2019 <- colMeans(expr_df[expr_df$life_history_stage == "Pup" & expr_df$year == "2018_2019", 1:n_genes])
+
+Mom_2020 <- colMeans(expr_df[expr_df$life_history_stage == "Mother" & expr_df$year == "2019_2020", 1:n_genes])
+Mom_2019 <- colMeans(expr_df[expr_df$life_history_stage == "Mother" & expr_df$year == "2018_2019", 1:n_genes])
+
+Pup_Y <- sqrt(sum((Pup_2019 - Pup_2020)^2))
+Mom_Y <- sqrt(sum((Mom_2019 - Mom_2020)^2))
+
+#Y_TP
+TP1_2019 <- colMeans(expr_df[expr_df$year == "2018_2019" & expr_df$group == "1", 1:n_genes])
+TP2_2019 <- colMeans(expr_df[expr_df$year == "2018_2019" & expr_df$group == "2", 1:n_genes])
+
+TP1_2020 <- colMeans(expr_df[expr_df$year == "2019_2020" & expr_df$group == "1", 1:n_genes])
+TP2_2020 <- colMeans(expr_df[expr_df$year == "2019_2020" & expr_df$group == "2", 1:n_genes])
+
+TP_2019 <- sqrt(sum((TP2_2019 - TP1_2019)^2))
+TP_2020 <- sqrt(sum((TP2_2020 - TP1_2020)^2))
+
+#LHS_TP
+Pup_TP1 <- colMeans(expr_df[expr_df$life_history_stage == "Pup" & expr_df$group == "1", 1:n_genes])
+Pup_TP2 <- colMeans(expr_df[expr_df$life_history_stage == "Pup" & expr_df$group == "2", 1:n_genes])
+
+Mom_TP1 <- colMeans(expr_df[expr_df$life_history_stage == "Mother" & expr_df$group == "1", 1:n_genes])
+Mom_TP2 <- colMeans(expr_df[expr_df$life_history_stage == "Mother" & expr_df$group == "2", 1:n_genes])
+
+TP_Pup <- sqrt(sum((Pup_TP2 - Pup_TP1)^2))
+TP_Mom <- sqrt(sum((Mom_TP2 - Mom_TP1)^2))
+
+#summary
+results_summary <- tibble(Interaction = c("Density x food availability", 
+                                          "Density x food availability",
+                                          "Food availability x life-history stage", 
+                                          "Food availability x life-history stage",
+                                          "Food availability x developmental time Point",
+                                          "Food availability x developmental time point",
+                                          "Life-history stage x developmental time point",
+                                          "Life-history stage x developmental time point"),
+                          Subgroup = c("FWB", "SSB",
+                                       "Pups", "Mothers",
+                                       "2018_2019", "2019_2020",
+                                       "Pups", "Mothers"),
+                          Distance = c(
+                            FWB_Y, SSB_Y,
+                            Pup_Y, Mom_Y,
+                            TP_2019, TP_2020,
+                            TP_Pup, TP_Mom)) %>%
+  group_by(Interaction) %>%
+  mutate(Shift_Ratio = Distance / Distance[1])
+
+print(results_summary)
+```
+
+
 ## Differential gene expression analysis for interactions
 
 In this section, we will perform differential gene expression analysis to identify genes that are differentially expressed in the following interactions: colony and developmental time point, season and life-history stage, season and developmental time point and finally life-history stage and developmental time point. 
